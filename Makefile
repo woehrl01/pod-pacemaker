@@ -1,3 +1,11 @@
+VERSION ?= v0.0.1
+REGISTRY ?= ghcr.io
+IMAGE_BUILDER ?= docker
+IMAGE_BUILD_CMD ?= build
+IMAGE_NAME ?= pod-limiter
+
+export IMG = $(REGISTRY)/$(IMAGE_NAME):$(VERSION)
+
 .PHONY: proto
 
 proto:
@@ -20,4 +28,4 @@ clean:
 	rm -rf bin/*
 
 docker-build:
-	docker build -t pod-limiter:latest .
+	$(IMAGE_BUILDER) $(IMAGE_BUILD_CMD) -t $(IMG) .
