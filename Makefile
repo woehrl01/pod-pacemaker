@@ -2,7 +2,7 @@ VERSION ?= v0.0.1
 REGISTRY ?= ghcr.io
 IMAGE_BUILDER ?= docker
 IMAGE_BUILD_CMD ?= build
-IMAGE_NAME ?= pod-limiter
+IMAGE_NAME ?= woehrl01/kubelet-throttler
 
 export IMG = $(REGISTRY)/$(IMAGE_NAME):$(VERSION)
 
