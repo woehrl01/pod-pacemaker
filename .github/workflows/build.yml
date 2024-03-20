@@ -20,7 +20,10 @@ jobs:
           fetch-depth: 0
       - name: Git Version
         id: version
-        uses: codacy/git-version@2.7.1
+        uses: paulhatch/semantic-version@v5.3.0
+        with:
+          tag_prefix: "v"
+          version_format: "${major}.${minor}.${patch}"
       - name: Setup buildx
         uses: docker/setup-buildx-action@v3
       - name: Run make
