@@ -29,3 +29,6 @@ jobs:
       - name: Run make
         run: |
           VERSION=${{ steps.version.outputs.version }} make docker-build
+      - name: Publish Image
+        run: |
+          VERSION=${{ steps.version.outputs.version }} make docker-push
