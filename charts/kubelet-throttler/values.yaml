@@ -1,0 +1,7 @@
+throttlerLimit: 10
+taintToRemove: pod-limiter
+hostPort: 50051
+
+image:
+  repository: gcr.io/woehrl01/kubelet-throttler
+  tag: latest

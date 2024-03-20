@@ -34,3 +34,6 @@ docker-build:
 
 docker-push:
 	$(IMAGE_BUILDER) push $(IMG)
+
+helm-render:
+	helm template charts/kubelet-throttler --set image.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.tag=$(VERSION)
