@@ -29,3 +29,6 @@ clean:
 
 docker-build:
 	$(IMAGE_BUILDER) $(IMAGE_BUILD_CMD) -t $(IMG) .
+
+docker-push:
+	$(IMAGE_BUILDER) push $(IMG)
