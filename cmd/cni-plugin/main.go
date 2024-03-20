@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -74,14 +75,37 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	containerId := args.ContainerID
+	slotName, err := extractPodNameWithNamespaceFromCniArgs(args)
+	if err != nil {
+		return err
+	}
 
-	err = Wait(containerId, conf)
+	err = Wait(slotName, conf)
 	if err != nil {
 		return err
 	}
 
 	return types.PrintResult(result, conf.CNIVersion)
+}
+
+func extractPodNameWithNamespaceFromCniArgs(args *skel.CmdArgs) (string, error) {
+	podName := ""
+	podNamespace := ""
+	for _, arg := range strings.Split(args.Args, ";") {
+		if strings.HasPrefix(arg, "K8S_POD_NAME=") {
+			return strings.TrimPrefix(arg, "K8S_POD_NAME="), nil
+		}
+
+		if strings.HasPrefix(arg, "K8S_POD_NAMESPACE=") {
+			podNamespace = strings.TrimPrefix(arg, "K8S_POD_NAMESPACE=")
+		}
+	}
+
+	if podNamespace != "" && podName != "" {
+		return fmt.Sprintf("%s/%s", podNamespace, podName), nil
+	}
+
+	return "", fmt.Errorf("K8S_POD_NAME not found in CNI_ARGS")
 }
 
 func cmdDel(args *skel.CmdArgs) error {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	goflag "flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -60,7 +61,7 @@ func main() {
 			handlePod(ctx, throttler, obj.(*v1.Pod))
 		},
 		DeleteFunc: func(obj interface{}) {
-			handlePod(ctx, throttler, obj.(*v1.Pod))
+			handleDeltePod(ctx, throttler, obj.(*v1.Pod))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			handlePod(ctx, throttler, newObj.(*v1.Pod))
@@ -88,11 +89,17 @@ func main() {
 func handlePod(ctx context.Context, throttler Throttler, pod *v1.Pod) {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Started != nil && *containerStatus.Started {
-			throttler.ReleaseSlot(ctx, containerStatus.ContainerID)
-		} else {
-			throttler.FillSlot(ctx, containerStatus.ContainerID)
+			throttler.ReleaseSlot(ctx, buildSlotName(pod))
 		}
 	}
+}
+
+func handleDeltePod(ctx context.Context, throttler Throttler, pod *v1.Pod) {
+	throttler.ReleaseSlot(ctx, buildSlotName(pod))
+}
+
+func buildSlotName(pod *v1.Pod) string {
+	return fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
 }
 
 func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {

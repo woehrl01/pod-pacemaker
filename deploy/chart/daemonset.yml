@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kubelet-throttler
-  namespace: default
 spec:
   selector:
     matchLabels:
@@ -36,10 +35,18 @@ spec:
           args:
             - "--throttler-limit=10"
             - "--taint-to-remove=pod-limiter"
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           ports:
             - containerPort: 50051
               hostPort: 50051
               protocol: TCP
+      tolerations:
+        - key: pod-limiter
+          effect: NoSchedule
       volumes:
         - name: cni-bin-dir
           hostPath:
