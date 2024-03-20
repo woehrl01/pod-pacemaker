@@ -98,7 +98,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 	return types.PrintResult(result, conf.CNIVersion)
 }
 
-
 func cmdDel(args *skel.CmdArgs) error {
 	// we don't need to do anything here
 	return nil

@@ -18,8 +18,8 @@ var (
 	cniType              = flag.String("cni-type", "pod-startup-limiter", "The type of the CNI plugin")
 	daemonPort           = flag.Int("daemon-port", 50051, "The port for the node daemon")
 	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 10, "The maximum wait time in seconds")
-	cniBinDir 		  = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
-	cniConfigDir 	  = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
+	cniBinDir            = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
+	cniConfigDir         = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
 )
 
 func main() {

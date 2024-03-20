@@ -12,15 +12,17 @@ import (
 )
 
 func Wait(slotName string, config *PluginConf) error {
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", config.DaemonPort), grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
-	c := pb.NewPodLimiterClient(conn)
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
+	conn, err := WaitUntilConnected(ctx, config.DaemonPort)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	c := pb.NewPodLimiterClient(conn)
+
 	r, err := c.Wait(ctx, &pb.WaitRequest{SlotName: slotName, MaxWaitSeconds: config.MaxWaitTimeInSeconds})
 	if err != nil {
 		return err
@@ -31,4 +33,21 @@ func Wait(slotName string, config *PluginConf) error {
 	}
 
 	return nil
+}
+
+func WaitUntilConnected(ctx context.Context, port int32) (*grpc.ClientConn, error) {
+	for {
+		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			log.Printf("did not connect: %v", err)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
+			time.Sleep(time.Second)
+			continue
+		}
+		return conn, nil
+	}
 }
