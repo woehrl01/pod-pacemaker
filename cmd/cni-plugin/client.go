@@ -32,7 +32,7 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 	if !r.Success {
 		return fmt.Errorf("failed to acquire slot: %s", r.Message)
 	}
-	
+
 	return nil
 }
 
