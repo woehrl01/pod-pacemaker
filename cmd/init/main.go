@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Generate the CNI network configuration file
-	configPath := fmt.Sprintf("%/10-%s.conf", *cniConfigDir, *cniName)
+	configPath := fmt.Sprintf("%s/10-%s.conf", *cniConfigDir, *cniName)
 	if err := generateCNIConfig(configPath); err != nil {
 		log.Fatalf("Failed to generate CNI network configuration: %v", err)
 	}
