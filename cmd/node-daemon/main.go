@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can run on a node")
+	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can start at the same time")
 	taintToRemove  = flag.String("taint-to-remove", "pod-limiter", "The taint to remove from the node")
 )
 
@@ -50,7 +50,7 @@ func main() {
 	defer close(stopper)
 
 	throttler := NewThrottler(*throttlerLimit)
-	
+
 	startPodHandler(ctx, clientset, throttler, stopper, nodeName)
 	removeStartupTaint(clientset, nodeName)
 	startGrpcServer(throttler)
