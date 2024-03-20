@@ -33,6 +33,9 @@ type PluginConf struct {
 	RuntimeConfig *struct {
 		PodAnnotations map[string]string `json:"io.kubernetes.cri.pod-annotations"`
 	} `json:"runtimeConfig"`
+
+	DaemonPort           int32 `json:"daemonPort"`
+	MaxWaitTimeInSeconds int32 `json:"maxWaitTimeInSeconds"`
 }
 
 // parseConfig parses the supplied configuration (and prevResult) from stdin.
@@ -50,7 +53,11 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 	if err := version.ParsePrevResult(&conf.NetConf); err != nil {
 		return nil, fmt.Errorf("could not parse prevResult: %v", err)
 	}
-	// End previous result parsing
+
+	//check if port is set
+	if conf.DaemonPort == 0 {
+		return nil, fmt.Errorf("daemonPort must be set")
+	}
 
 	return &conf, nil
 }
@@ -69,7 +76,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	containerId := args.ContainerID
 
-	err = Wait(containerId, 10)
+	err = Wait(containerId, conf)
 	if err != nil {
 		return err
 	}

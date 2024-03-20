@@ -16,7 +16,13 @@ spec:
       initContainers:
         - name: init-cni
           image: gcr.io/woehrl01/kubelet-throttler:latest
-          command: ["./cni-init"]
+          command:
+            - "./cni-init"
+          args:
+            - "--cni-bin-dir=/opt/cni/bin"
+            - "--cni-config-dir=/etc/cni/net.d"
+            - "--daemon-port=50051"
+            - "--max-wait-time-in-seconds=10"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
@@ -25,7 +31,11 @@ spec:
       containers:
         - name: node-daemon
           image: gcr.io/woehrl01/kubelet-throttler:latest
-          command: ["./node-daemon"]
+          command:
+            - "./node-daemon"
+          args:
+            - "--throttler-limit=10"
+            - "--taint-to-remove=pod-limiter"
           ports:
             - containerPort: 50051
               hostPort: 50051

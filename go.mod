@@ -8,6 +8,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.16.0
 	github.com/onsi/gomega v1.31.1
 	github.com/sirupsen/logrus v1.9.3
+	github.com/spf13/pflag v1.0.5
 	golang.org/x/sync v0.6.0
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0

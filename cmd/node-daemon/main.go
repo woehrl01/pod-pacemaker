@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	goflag "flag"
 	"os"
 	"time"
+
+	flag "github.com/spf13/pflag"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +19,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can run on a node")
+	taintToRemove  = flag.String("taint-to-remove", "pod-limiter", "The taint to remove from the node")
+)
+
 func main() {
+	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+	if err := flag.Set("logtostderr", "true"); err != nil {
+		panic(err)
+	}
+	flag.Parse()
+
 	ctx := context.Background()
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -32,14 +46,13 @@ func main() {
 		log.Fatal("NODE_NAME environment variable not set")
 	}
 
-	// create the pod watcher
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 	}))
 
 	podInformer := factory.Core().V1().Pods()
 
-	throttler := NewThrottler(10)
+	throttler := NewThrottler(*throttlerLimit)
 
 	informer := podInformer.Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -83,16 +96,19 @@ func handlePod(ctx context.Context, throttler Throttler, pod *v1.Pod) {
 }
 
 func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
-	// Get the node object
+	if *taintToRemove == "" {
+		log.Println("No taint to remove, no update required.")
+		return
+	}
+
 	node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get node %s: %v", nodeName, err)
 	}
 
-	// Remove the taint
 	newTaints := []v1.Taint{}
 	for _, taint := range node.Spec.Taints {
-		if taint.Key != "pod-limiter" {
+		if taint.Key != *taintToRemove {
 			newTaints = append(newTaints, taint)
 		}
 	}

@@ -11,8 +11,8 @@ import (
 	pb "woehrl01/kubelet-throttler/proto"
 )
 
-func Wait(containerID string, maxWaitSeconds int32) error {
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
+func Wait(containerID string, config *PluginConf) error {
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", config.DaemonPort), grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -21,7 +21,7 @@ func Wait(containerID string, maxWaitSeconds int32) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := c.Wait(ctx, &pb.WaitRequest{ContainerId: containerID, MaxWaitSeconds: maxWaitSeconds})
+	r, err := c.Wait(ctx, &pb.WaitRequest{ContainerId: containerID, MaxWaitSeconds: config.MaxWaitTimeInSeconds})
 	if err != nil {
 		return err
 	}
