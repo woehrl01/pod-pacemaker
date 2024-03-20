@@ -9,7 +9,7 @@ import (
 
 func main() {
 	// Define the source and target paths for the CNI plugin binary
-	sourcePath := "/cni-plugin-source/pod-startup-limiter"
+	sourcePath := "/root/cni-plugin"
 	targetDir := "/opt/cni/bin"
 	targetPath := filepath.Join(targetDir, "pod-startup-limiter")
 
