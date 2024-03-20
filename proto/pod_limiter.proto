@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package podlimiter;
+
+option go_package = "./podlimiter-proto";
+
+service PodLimiter {
+    rpc Wait(WaitRequest) returns (WaitResponse);
+}
+
+message WaitRequest {
+    string container_id = 1;
+    int32 max_wait_seconds = 4;
+}
+
+message WaitResponse {
+    bool success = 1;
+    string message = 2;
+}

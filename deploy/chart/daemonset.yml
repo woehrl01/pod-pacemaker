@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: grpc-cni-daemonset
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      name: grpc-cni-pod
+  template:
+    metadata:
+      labels:
+        name: grpc-cni-pod
+    spec:
+      serviceAccountName: node-pod-reader
+      initContainers:
+        - name: init-cni
+          image: your-registry/install-cni:latest # Use your actual image
+          volumeMounts:
+            - name: cni-bin-dir
+              mountPath: /opt/cni/bin
+            - name: cni-config-dir
+              mountPath: /etc/cni/net.d
+      containers:
+        - name: grpc-service
+          image: your-registry/grpc-service:latest # Use your actual gRPC service image
+          ports:
+            - containerPort: 50051
+              hostPort: 50051
+              protocol: TCP
+      volumes:
+        - name: cni-bin-dir
+          hostPath:
+            path: /opt/cni/bin
+            type: DirectoryOrCreate
+        - name: cni-config-dir
+          hostPath:
+            path: /etc/cni/net.d
+            type: DirectoryOrCreate
