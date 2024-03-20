@@ -56,15 +56,10 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 		return nil, fmt.Errorf("failed to parse network configuration: %v", err)
 	}
 
-	// Parse previous result. This will parse, validate, and place the
-	// previous result object into conf.PrevResult. If you need to modify
-	// or inspect the PrevResult you will need to convert it to a concrete
-	// versioned Result struct.
 	if err := version.ParsePrevResult(&conf.NetConf); err != nil {
 		return nil, fmt.Errorf("could not parse prevResult: %v", err)
 	}
 
-	//check if port is set
 	if conf.DaemonPort == 0 {
 		return nil, fmt.Errorf("daemonPort must be set")
 	}
@@ -90,7 +85,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	slotName := fmt.Sprintf("%s/%s", string(k8sArgs.K8S_POD_NAMESPACE), string(k8sArgs.K8S_POD_NAME))
-	err = Wait(slotName, conf)
+	err = WaitForSlot(slotName, conf)
 	if err != nil {
 		return err
 	}

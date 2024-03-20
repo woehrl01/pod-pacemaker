@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	pb "woehrl01/kubelet-throttler/proto"
 )
 
-func Wait(slotName string, config *PluginConf) error {
+func WaitForSlot(slotName string, config *PluginConf) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -29,15 +30,15 @@ func Wait(slotName string, config *PluginConf) error {
 	}
 
 	if !r.Success {
-		return fmt.Errorf("failed to acquire semaphore")
+		return fmt.Errorf("failed to acquire slot: %s", r.Message)
 	}
-
+	
 	return nil
 }
 
 func WaitUntilConnected(ctx context.Context, port int32) (*grpc.ClientConn, error) {
 	for {
-		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithInsecure(), grpc.WithBlock())
+		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 		if err != nil {
 			log.Printf("did not connect: %v", err)
 			select {
