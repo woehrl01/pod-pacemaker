@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -37,6 +36,16 @@ type PluginConf struct {
 
 	DaemonPort           int32 `json:"daemonPort"`
 	MaxWaitTimeInSeconds int32 `json:"maxWaitTimeInSeconds"`
+}
+
+type K8sArgs struct {
+	types.CommonArgs
+
+	// K8S_POD_NAME is pod's name
+	K8S_POD_NAME types.UnmarshallableString
+
+	// K8S_POD_NAMESPACE is pod's namespace
+	K8S_POD_NAMESPACE types.UnmarshallableString
 }
 
 // parseConfig parses the supplied configuration (and prevResult) from stdin.
@@ -75,11 +84,12 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	slotName, err := extractPodNameWithNamespaceFromCniArgs(args)
-	if err != nil {
+	var k8sArgs K8sArgs
+	if err := types.LoadArgs(args.Args, &k8sArgs); err != nil {
 		return err
 	}
 
+	slotName := fmt.Sprintf("%s/%s", string(k8sArgs.K8S_POD_NAMESPACE), string(k8sArgs.K8S_POD_NAME))
 	err = Wait(slotName, conf)
 	if err != nil {
 		return err
@@ -88,25 +98,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 	return types.PrintResult(result, conf.CNIVersion)
 }
 
-func extractPodNameWithNamespaceFromCniArgs(args *skel.CmdArgs) (string, error) {
-	podName := ""
-	podNamespace := ""
-	for _, arg := range strings.Split(args.Args, ";") {
-		if strings.HasPrefix(arg, "K8S_POD_NAME=") {
-			return strings.TrimPrefix(arg, "K8S_POD_NAME="), nil
-		}
-
-		if strings.HasPrefix(arg, "K8S_POD_NAMESPACE=") {
-			podNamespace = strings.TrimPrefix(arg, "K8S_POD_NAMESPACE=")
-		}
-	}
-
-	if podNamespace != "" && podName != "" {
-		return fmt.Sprintf("%s/%s", podNamespace, podName), nil
-	}
-
-	return "", fmt.Errorf("K8S_POD_NAME not found in CNI_ARGS")
-}
 
 func cmdDel(args *skel.CmdArgs) error {
 	// we don't need to do anything here
