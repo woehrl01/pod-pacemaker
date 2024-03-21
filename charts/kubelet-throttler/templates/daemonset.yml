@@ -21,7 +21,7 @@ spec:
             - "--cni-bin-dir=/opt/cni/bin"
             - "--cni-config-dir=/etc/cni/net.d"
             - "--daemon-port={{ .Values.hostPort }}"
-            - "--max-wait-time-in-seconds=10"
+            - "--max-wait-time-in-seconds={{ .Values.maxWaitTimeInSeconds }}"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
@@ -51,6 +51,17 @@ spec:
       tolerations:
         - key: {{ .Values.taintToRemove }}
           effect: NoSchedule
+        {{- with .Values.tolerations }}
+        {{ toYaml . | nindent 8 }}
+        {{ end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | nindent 6 }}
+      {{ end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{ toYaml . | nindent 6 }}
+      {{ end }}
       volumes:
         - name: cni-bin-dir
           hostPath:
