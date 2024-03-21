@@ -40,7 +40,7 @@ func main() {
 	}
 
 	// Generate the CNI network configuration file
-	configPath := fmt.Sprintf("%s/10-%s.conf", *cniConfigDir, *cniName)
+	configPath := fmt.Sprintf("%s/20-%s.conflist", *cniConfigDir, *cniName)
 	if err := generateCNIConfig(configPath); err != nil {
 		log.Fatalf("Failed to generate CNI network configuration: %v", err)
 	}
@@ -79,15 +79,21 @@ func copyFile(src, dst string) error {
 
 // generateCNIConfig creates a CNI network configuration file
 func generateCNIConfig(filePath string) error {
-	config := CniConfig{
-		CniVersion: "0.3.1",
-		Name:       *cniName,
-		Type:       *cniType,
-		Capabilities: CniConfigCapabilities{
-			PodAnnotations: true,
+	config := CniConfigList{
+		CniVersion:   "0.4.0",
+		CniVersions:  []string{"0.4.0"},
+		Name:         *cniName,
+		DisableCheck: true,
+		Plugins: []CniPlugin{
+			{
+				Type: *cniType,
+				Capabilities: CniConfigCapabilities{
+					PodAnnotations: true,
+				},
+				DaemonPort:           *daemonPort,
+				MaxWaitTimeInSeconds: *maxWaitTimeInSeconds,
+			},
 		},
-		DaemonPort:           *daemonPort,
-		MaxWaitTimeInSeconds: *maxWaitTimeInSeconds,
 	}
 
 	configContent, err := json.MarshalIndent(config, "", "  ")
@@ -98,9 +104,15 @@ func generateCNIConfig(filePath string) error {
 	return os.WriteFile(filePath, configContent, 0644)
 }
 
-type CniConfig struct {
-	CniVersion           string                `json:"cniVersion"`
-	Name                 string                `json:"name"`
+type CniConfigList struct {
+	CniVersion   string      `json:"cniVersion"`
+	CniVersions  []string    `json:"cniVersions"`
+	Name         string      `json:"name"`
+	DisableCheck bool        `json:"disableCheck"`
+	Plugins      []CniPlugin `json:"plugins"`
+}
+
+type CniPlugin struct {
 	Type                 string                `json:"type"`
 	Capabilities         CniConfigCapabilities `json:"capabilities"`
 	DaemonPort           int                   `json:"daemonPort"`
