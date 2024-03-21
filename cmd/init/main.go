@@ -19,6 +19,8 @@ var (
 	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 10, "The maximum wait time in seconds")
 	cniBinDir            = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
 	cniConfigDir         = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
+	primaryConfigName    = flag.String("primary-config-name", "10-aws.conflist", "The name of the primary CNI configuration file")
+	mergedConfigName     = flag.String("merged-config-name", "00-merged-pod-startup-limiter.conflist", "The name of the merged CNI configuration file")
 )
 
 func main() {
@@ -43,6 +45,15 @@ func main() {
 	configPath := fmt.Sprintf("%s/20-%s.conflist", *cniConfigDir, *cniName)
 	if err := generateCNIConfig(configPath); err != nil {
 		log.Fatalf("Failed to generate CNI network configuration: %v", err)
+	}
+
+	// Merge the CNI network configuration file with the existing configuration
+	// This is necessary to ensure that the CNI plugin is added to the list of plugins
+	// that are executed when a pod is started
+	primaryConfigPath := fmt.Sprintf("%s/%s", *cniConfigDir, *primaryConfigName)
+	mergedConfigPath := fmt.Sprintf("%s/%s", *cniConfigDir, *mergedConfigName)
+	if err := mergeTwoConfigs(configPath, primaryConfigPath, mergedConfigPath); err != nil {
+		log.Fatalf("Failed to merge CNI network configuration: %v", err)
 	}
 
 	log.Println("CNI plugin setup completed successfully.")
@@ -121,4 +132,57 @@ type CniPlugin struct {
 
 type CniConfigCapabilities struct {
 	PodAnnotations bool `json:"io.kubernetes.cri.pod-annotations"`
+}
+
+func mergeTwoConfigs(configFile1, configFile2, outputFile string) error {
+	// Read the contents of the two configuration files
+	config1, err := os.ReadFile(configFile1)
+	if err != nil {
+		return err
+	}
+
+	config2, err := os.ReadFile(configFile2)
+	if err != nil {
+		return err
+	}
+
+	// decode the JSON data
+	var config1Data map[string]interface{}
+	var config2Data map[string]interface{}
+	if err := json.Unmarshal(config1, &config1Data); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(config2, &config2Data); err != nil {
+		return err
+	}
+
+	// check if both have "plugins" key
+	if _, ok := config1Data["plugins"]; !ok {
+		return fmt.Errorf("config1 does not have 'plugins' key")
+	}
+
+	if _, ok := config2Data["plugins"]; !ok {
+		return fmt.Errorf("config2 does not have 'plugins' key")
+	}
+
+	// merge the "plugins" key
+	plugins1 := config1Data["plugins"].([]interface{})
+	plugins2 := config2Data["plugins"].([]interface{})
+	mergedPlugins := append(plugins1, plugins2...)
+
+	// update the "plugins" key
+	config1Data["plugins"] = mergedPlugins
+
+	// encode the JSON data
+	mergedConfig, err := json.MarshalIndent(config1Data, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	// write the merged configuration to the output file
+	if err := os.WriteFile(outputFile, mergedConfig, 0644); err != nil {
+		return err
+	}
+
+	return nil
 }
