@@ -81,11 +81,11 @@ func copyFile(src, dst string) error {
 func generateCNIConfig(filePath string) error {
 	config := CniConfigList{
 		CniVersion:   "0.4.0",
-		CniVersions:  []string{"0.4.0"},
 		Name:         *cniName,
 		DisableCheck: true,
 		Plugins: []CniPlugin{
 			{
+				Name: *cniName,
 				Type: *cniType,
 				Capabilities: CniConfigCapabilities{
 					PodAnnotations: true,
@@ -106,13 +106,13 @@ func generateCNIConfig(filePath string) error {
 
 type CniConfigList struct {
 	CniVersion   string      `json:"cniVersion"`
-	CniVersions  []string    `json:"cniVersions"`
 	Name         string      `json:"name"`
 	DisableCheck bool        `json:"disableCheck"`
 	Plugins      []CniPlugin `json:"plugins"`
 }
 
 type CniPlugin struct {
+	Name                 string                `json:"name"`
 	Type                 string                `json:"type"`
 	Capabilities         CniConfigCapabilities `json:"capabilities"`
 	DaemonPort           int                   `json:"daemonPort"`
