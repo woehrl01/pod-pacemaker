@@ -5,7 +5,7 @@ go 1.22.1
 require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.4.1
-	github.com/onsi/ginkgo/v2 v2.16.0
+	github.com/onsi/ginkgo/v2 v2.17.0
 	github.com/onsi/gomega v1.31.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
