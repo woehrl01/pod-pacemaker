@@ -31,8 +31,6 @@ sequenceDiagram
 
 ## Limitations
 
-While kubelet-throttler is effective in managing pod startups, it has specific limitations to consider:
-
 - **New Pod Creation Only:** It is designed to control the initiation of new pods. It does not apply to pods that are restarting due to crashes or OOM kills. As such, it is focused on initial deployment scenarios rather than recovery or error-handling situations.
 
 ## License
