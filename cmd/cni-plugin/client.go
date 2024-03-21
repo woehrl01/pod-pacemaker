@@ -13,7 +13,7 @@ import (
 )
 
 func WaitForSlot(slotName string, config *PluginConf) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(config.MaxWaitTimeInSeconds))
 	defer cancel()
 
 	conn, err := WaitUntilConnected(ctx, config.DaemonPort)
@@ -24,7 +24,7 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 
 	c := pb.NewPodLimiterClient(conn)
 
-	r, err := c.Wait(ctx, &pb.WaitRequest{SlotName: slotName, MaxWaitSeconds: config.MaxWaitTimeInSeconds})
+	r, err := c.Wait(ctx, &pb.WaitRequest{SlotName: slotName})
 	if err != nil {
 		return err
 	}

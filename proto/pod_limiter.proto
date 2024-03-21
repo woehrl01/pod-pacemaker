@@ -10,7 +10,6 @@ service PodLimiter {
 
 message WaitRequest {
     string slot_name = 1;
-    int32 max_wait_seconds = 4;
 }
 
 message WaitResponse {
