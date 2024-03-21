@@ -67,6 +67,10 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 	return &conf, nil
 }
 
+func main() {
+	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("pod-startup-limiter"))
+}
+
 // cmdAdd is called for ADD requests
 func cmdAdd(args *skel.CmdArgs) error {
 	conf, err := parseConfig(args.StdinData)
@@ -98,16 +102,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 }
 
 func cmdDel(args *skel.CmdArgs) error {
-	// we don't need to do anything here
 	return nil
 }
 
-func main() {
-	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("pod-startup-limiter"))
-}
-
 func cmdCheck(_ *skel.CmdArgs) error {
-	return fmt.Errorf("not implemented")
+	return nil
 }
 
 func callChain(conf *PluginConf) (*current.Result, error) {
