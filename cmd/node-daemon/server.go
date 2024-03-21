@@ -8,6 +8,9 @@ import (
 
 	pb "woehrl01/kubelet-throttler/proto"
 
+	"google.golang.org/grpc/health"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
+
 	"google.golang.org/grpc"
 )
 
@@ -39,6 +42,8 @@ func startGrpcServer(throttler Throttler) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
+	healthcheck := health.NewServer()
+	healthgrpc.RegisterHealthServer(s, healthcheck)
 
 	service := NewPodLimitersServer(throttler)
 
