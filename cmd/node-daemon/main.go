@@ -21,6 +21,7 @@ import (
 var (
 	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can start at the same time")
 	taintToRemove  = flag.String("taint-to-remove", "pod-limiter", "The taint to remove from the node")
+	daemonPort           = flag.Int("daemon-port", 50051, "The port for the node daemon")
 )
 
 func main() {

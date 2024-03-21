@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"time"
@@ -38,8 +39,8 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 	return &pb.WaitResponse{Success: true, Message: "Waited successfully"}, nil
 }
 
-func startGrpcServer(throttler Throttler) {
-	lis, err := net.Listen("tcp", ":50051")
+func startGrpcServer(throttler Throttler, port int32) {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

@@ -38,18 +38,18 @@ spec:
           args:
             - "--throttler-limit={{ .Values.throttlerLimit }}"
             - "--taint-to-remove={{ .Values.taintToRemove }}"
+            - "--daemon-port={{ .Values.hostPort }}"
           env:
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
           ports:
-            - containerPort: 50051
-              hostPort: {{ .Values.hostPort }}
+            - containerPort: {{ .Values.hostPort }}
               protocol: TCP
           livenessProbe:
             grpc:
-              port: 50051
+              port: {{ .Values.hostPort }}
             initialDelaySeconds: 10
       tolerations:
         - key: {{ .Values.taintToRemove }}
