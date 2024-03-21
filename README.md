@@ -6,6 +6,23 @@ kubelet-throttler is a Kubernetes tool designed to manage the rate at which pods
 
 kubelet-throttler operates as a CNI (Container Network Interface) plugin, embedding itself into the pod lifecycle at a critical early stage. By functioning at the CNI level, kubelet-throttler is able to intervene immediately after the scheduler's decision but before the pod's network setup is finalized. It strategically delays the creation of the pod sandbox, effectively spacing out pod initializations, mitigating potential stress on the node's resources.
 
+```mermaid
+sequenceDiagram
+    participant S as Scheduler
+    participant K as Kubelet
+    participant C as CNI Plugin (kubelet-throttler)
+    participant D as DaemonSet (Logic Implementation)
+    participant P as Pod Startup
+
+    S->>K: Schedules Pod
+    K->>C: Initiates Pod Network Setup
+    Note over C,D: kubelet-throttler communicates with DaemonSet
+    C->>D: Requests Permission to Proceed
+    D->>C: Grants/Denies Permission
+    C->>P: Starts Pod Sandbox Creation (if permitted)
+    P->>P: Pod Initialization & Startup
+```
+
 ## Key Features
 
 - **Seamless Integration:** Functions as a CNI plugin, requiring no modifications to the pod spec or reliance on initContainers.
