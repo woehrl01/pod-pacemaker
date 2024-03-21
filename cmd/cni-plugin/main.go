@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
 	bv "github.com/containernetworking/plugins/pkg/utils/buildversion"
+	"github.com/sirupsen/logrus"
 )
 
 type PluginConf struct {
@@ -75,7 +75,7 @@ func main() {
 
 func setupLogging() error {
 	filename := "/var/log/pod-startup-limiter.log"
-	f, err := os.OpenFile(filename, os.O_WRONLY | os.O_CREATE, 0755)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		return err
 	}
@@ -96,8 +96,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 		logrus.Errorf("Failed to parse config: %v", err)
 		return err
 	}
-
-	
 
 	result, err := callChain(conf)
 	if err != nil {
