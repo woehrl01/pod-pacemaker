@@ -52,7 +52,7 @@ func main() {
 	// that are executed when a pod is started
 	primaryConfigPath := fmt.Sprintf("%s/%s", *cniConfigDir, *primaryConfigName)
 	mergedConfigPath := fmt.Sprintf("%s/%s", *cniConfigDir, *mergedConfigName)
-	if err := mergeTwoConfigs(configPath, primaryConfigPath, mergedConfigPath); err != nil {
+	if err := mergeTwoConfigs(primaryConfigPath, configPath, mergedConfigPath); err != nil {
 		log.Fatalf("Failed to merge CNI network configuration: %v", err)
 	}
 
