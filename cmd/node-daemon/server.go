@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	pb "woehrl01/kubelet-throttler/proto"
 
@@ -29,13 +30,15 @@ func NewPodLimitersServer(throttler Throttler) *podLimitService {
 }
 
 func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.WaitResponse, error) {
-	log.Printf("Received: %v", in.GetSlotName())
+	log.Infof("Received: %v", in.GetSlotName())
 	maxWait := in.GetMaxWaitSeconds()
 	waitCtx, cancel := context.WithTimeout(ctx, time.Duration(maxWait)*time.Second)
 	defer cancel()
 	if err := s.throttler.AquireSlot(waitCtx, in.GetSlotName()); err != nil {
+		log.Infof("Failed to acquire lock: %v", err)
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
 	}
+	log.Infof("Acquired slot %s", in.GetSlotName())
 	return &pb.WaitResponse{Success: true, Message: "Waited successfully"}, nil
 }
 
