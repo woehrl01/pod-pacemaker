@@ -36,9 +36,17 @@ func main() {
 		log.Fatalf("Failed to create target directory: %v", err)
 	}
 
+
+	targetTmpName := fmt.Sprintf("%s.tmp", targetPath)
+
 	// Copy the CNI plugin binary to the target location
-	if err := copyFile(sourcePath, targetPath); err != nil {
+	if err := copyFile(sourcePath, targetTmpName); err != nil {
 		log.Fatalf("Failed to copy CNI plugin binary: %v", err)
+	}
+
+	// Rename the copied file to the final name
+	if err := os.Rename(targetTmpName, targetPath); err != nil {
+		log.Fatalf("Failed to rename CNI plugin binary: %v", err)
 	}
 
 	// Generate the CNI network configuration file
@@ -75,7 +83,6 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	defer source.Close()
-
 	destination, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -84,6 +91,8 @@ func copyFile(src, dst string) error {
 	if _, err := io.Copy(destination, source); err != nil {
 		return err
 	}
+
+
 
 	return os.Chmod(dst, sourceFileStat.Mode())
 }
