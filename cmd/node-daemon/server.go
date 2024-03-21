@@ -30,7 +30,8 @@ func NewPodLimitersServer(throttler Throttler) *podLimitService {
 }
 
 func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.WaitResponse, error) {
-	log.Infof("Received: %v", in.GetSlotName())
+	log.Debugf("Received: %v", in.GetSlotName())
+	startTime := time.Now()
 	maxWait := in.GetMaxWaitSeconds()
 	waitCtx, cancel := context.WithTimeout(ctx, time.Duration(maxWait)*time.Second)
 	defer cancel()
@@ -38,7 +39,11 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 		log.Infof("Failed to acquire lock: %v", err)
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
 	}
-	log.Infof("Acquired slot %s", in.GetSlotName())
+	duration := time.Since(startTime)
+	log.WithFields(log.Fields{
+		"duration": duration,
+		"slot":     in.GetSlotName(),
+	}).Info("Acquired slot")
 	return &pb.WaitResponse{Success: true, Message: "Waited successfully"}, nil
 }
 
