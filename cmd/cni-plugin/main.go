@@ -75,7 +75,7 @@ func main() {
 
 func setupLogging() error {
 	filename := "/var/log/pod-startup-limiter.log"
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0755)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	logrus.Infof("Received CNI ADD request with args: %v", args)
+	logrus.Infof("Received CNI ADD request with args: %v", args.Args)
 
 	conf, err := parseConfig(args.StdinData)
 	if err != nil {
