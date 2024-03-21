@@ -122,7 +122,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 	logrus.Infof("Acquired slot %s", slotName)
-
 	return types.PrintResult(result, conf.CNIVersion)
 }
 

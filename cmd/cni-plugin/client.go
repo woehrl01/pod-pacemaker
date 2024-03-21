@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -38,9 +38,11 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 
 func WaitUntilConnected(ctx context.Context, port int32) (*grpc.ClientConn, error) {
 	for {
-		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+		server := fmt.Sprintf("localhost:%d", port)
+		logrus.Infof("Connecting to %s", server)
+		conn, err := grpc.Dial(server, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 		if err != nil {
-			log.Printf("did not connect: %v", err)
+			logrus.Errorf("did not connect: %v", err)
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()

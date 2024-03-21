@@ -19,6 +19,8 @@ type podLimitService struct {
 	throttler Throttler
 }
 
+var _ pb.PodLimiterServer = &podLimitService{}
+
 func NewPodLimitersServer(throttler Throttler) *podLimitService {
 	return &podLimitService{
 		throttler: throttler,
@@ -48,6 +50,7 @@ func startGrpcServer(throttler Throttler) {
 	service := NewPodLimitersServer(throttler)
 
 	pb.RegisterPodLimiterServer(s, service)
+	
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
