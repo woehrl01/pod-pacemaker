@@ -2,6 +2,7 @@ throttlerLimit: 10
 maxWaitTimeInSeconds: 10
 taintToRemove: pod-limiter
 hostPort: 60312
+debugLogging: true
 
 image:
   repository: ghcr.io/woehrl01/kubelet-throttler

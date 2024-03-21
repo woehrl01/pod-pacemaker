@@ -22,10 +22,14 @@ var (
 	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can start at the same time")
 	taintToRemove  = flag.String("taint-to-remove", "pod-limiter", "The taint to remove from the node")
 	daemonPort     = flag.Int("daemon-port", 50051, "The port for the node daemon")
+	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
 )
 
 func main() {
 	flag.Parse()
+	if *debugLogging {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	config, err := rest.InClusterConfig()
 	if err != nil {

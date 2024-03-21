@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -39,16 +39,18 @@ func (t *throttler) AquireSlot(ctx context.Context, slotId string) error {
 
 		if _, ok := t.mapping[slotId]; ok {
 			t.lock.Release(1) // already acquired
+			logrus.Debugf("Slot %s already acquired", slotId)
 			return nil
 		}
 
 		if len(t.mapping) < t.limit {
 			t.mapping[slotId] = true
 			t.lock.Release(1)
+			logrus.Debugf("Acquiring slot %s", slotId)
 			return nil
 		}
 		t.lock.Release(1)
-
+		logrus.Debugf("Slot %s is blocked", slotId)
 		select {
 		case <-ctx.Done():
 			return nil
@@ -63,10 +65,10 @@ func (t *throttler) FillSlot(ctx context.Context, slotId string) {
 
 	if _, ok := t.mapping[slotId]; !ok {
 		t.mapping[slotId] = true
+		logrus.Debugf("Filling slot %s", slotId)
 		select {
 		case t.isBlockedCh <- false:
 		default:
-			log.Debug("slot filled but no one is waiting")
 		}
 	}
 }
@@ -77,10 +79,10 @@ func (t *throttler) ReleaseSlot(ctx context.Context, slotId string) {
 	if _, ok := t.mapping[slotId]; !ok {
 		return
 	}
+	logrus.Debugf("Releasing slot %s", slotId)
 	delete(t.mapping, slotId)
 	select {
 	case t.isBlockedCh <- false:
 	default:
-		log.Debug("Slot released but no one is waiting")
 	}
 }
