@@ -39,7 +39,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 	return &pb.WaitResponse{Success: true, Message: "Waited successfully"}, nil
 }
 
-func startGrpcServer(throttler Throttler, port int32) {
+func startGrpcServer(throttler Throttler, port int) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -51,7 +51,7 @@ func startGrpcServer(throttler Throttler, port int32) {
 	service := NewPodLimitersServer(throttler)
 
 	pb.RegisterPodLimiterServer(s, service)
-	
+
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
