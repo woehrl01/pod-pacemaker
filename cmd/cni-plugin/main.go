@@ -84,6 +84,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
+	if shouldSkipThrotteling(conf, &k8sArgs) {
+		return types.PrintResult(result, conf.CNIVersion)
+	}
+
 	slotName := fmt.Sprintf("%s/%s", string(k8sArgs.K8S_POD_NAMESPACE), string(k8sArgs.K8S_POD_NAME))
 	err = WaitForSlot(slotName, conf)
 	if err != nil {
@@ -116,4 +120,16 @@ func callChain(conf *PluginConf) (*current.Result, error) {
 		return nil, fmt.Errorf("failed to convert prevResult: %v", err)
 	}
 	return prevResult, nil
+}
+
+func shouldSkipThrotteling(conf *PluginConf, k8sArgs *K8sArgs) bool {
+	if v, ok := conf.RuntimeConfig.PodAnnotations["woehrl.net/skip-throttle"]; ok {
+		return v == "true"
+	}
+
+	if string(k8sArgs.K8S_POD_NAMESPACE) == "kube-system" {
+		return true
+	}
+
+	return false
 }

@@ -10,6 +10,8 @@ spec:
     metadata:
       labels:
         name: kubelet-throttler
+      annotations:
+        woehrl.net/skip-throttle: "true"
     spec:
       serviceAccountName: kubelet-throttler
       initContainers:
