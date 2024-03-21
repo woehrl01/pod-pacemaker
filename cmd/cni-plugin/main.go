@@ -19,7 +19,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
@@ -71,32 +73,57 @@ func main() {
 	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("pod-startup-limiter"))
 }
 
-// cmdAdd is called for ADD requests
-func cmdAdd(args *skel.CmdArgs) error {
-	conf, err := parseConfig(args.StdinData)
+func setupLogging() error {
+	filename := "/var/log/pod-startup-limiter.log"
+	f, err := os.OpenFile(filename, os.O_WRONLY | os.O_CREATE, 0755)
 	if err != nil {
 		return err
 	}
+	logrus.SetOutput(f)
+	return nil
+}
+
+// cmdAdd is called for ADD requests
+func cmdAdd(args *skel.CmdArgs) error {
+	if err := setupLogging(); err != nil {
+		return err
+	}
+
+	logrus.Infof("Received CNI ADD request with args: %v", args)
+
+	conf, err := parseConfig(args.StdinData)
+	if err != nil {
+		logrus.Errorf("Failed to parse config: %v", err)
+		return err
+	}
+
+	
 
 	result, err := callChain(conf)
 	if err != nil {
+		logrus.Errorf("Failed to call previous plugin: %v", err)
 		return err
 	}
 
 	var k8sArgs K8sArgs
 	if err := types.LoadArgs(args.Args, &k8sArgs); err != nil {
+		logrus.Errorf("Failed to load K8s args: %v", err)
 		return err
 	}
 
 	if shouldSkipThrotteling(conf, &k8sArgs) {
+		logrus.Infof("Skipping throttling for %s/%s", string(k8sArgs.K8S_POD_NAMESPACE), string(k8sArgs.K8S_POD_NAME))
 		return types.PrintResult(result, conf.CNIVersion)
 	}
 
 	slotName := fmt.Sprintf("%s/%s", string(k8sArgs.K8S_POD_NAMESPACE), string(k8sArgs.K8S_POD_NAME))
+	logrus.Infof("Waiting for slot %s", slotName)
 	err = WaitForSlot(slotName, conf)
 	if err != nil {
+		logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
 		return err
 	}
+	logrus.Infof("Acquired slot %s", slotName)
 
 	return types.PrintResult(result, conf.CNIVersion)
 }
