@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	goflag "flag"
 	"os"
 	"time"
 
@@ -25,10 +24,6 @@ var (
 )
 
 func main() {
-	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
-	if err := flag.Set("logtostderr", "true"); err != nil {
-		panic(err)
-	}
 	flag.Parse()
 
 	config, err := rest.InClusterConfig()

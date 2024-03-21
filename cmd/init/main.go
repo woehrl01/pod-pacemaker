@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	goflag "flag"
 	"fmt"
 
 	flag "github.com/spf13/pflag"
@@ -23,10 +22,6 @@ var (
 )
 
 func main() {
-	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
-	if err := flag.Set("logtostderr", "true"); err != nil {
-		panic(err)
-	}
 	flag.Parse()
 
 	// Define the source and target paths for the CNI plugin binary
