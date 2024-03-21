@@ -20,10 +20,11 @@ func NewPodEventHandler(throttler Throttler, ctx context.Context) *PodEventHandl
 }
 
 func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
-	allStarted := false
+	allStarted := true
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if containerStatus.Started != nil && *containerStatus.Started {
-			allStarted = true
+		if containerStatus.Started == nil || !*containerStatus.Started {
+			allStarted = false
+			break
 		}
 	}
 	if allStarted {
