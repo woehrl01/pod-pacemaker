@@ -40,7 +40,9 @@ func WaitUntilConnected(ctx context.Context, port int32) (*grpc.ClientConn, erro
 	for {
 		server := fmt.Sprintf("localhost:%d", port)
 		logrus.Infof("Connecting to %s", server)
-		conn, err := grpc.Dial(server, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+		conn, err := grpc.DialContext(ctx, server, 
+			grpc.WithTransportCredentials(insecure.NewCredentials()), 
+		)
 		if err != nil {
 			logrus.Errorf("did not connect: %v", err)
 			select {
