@@ -20,10 +20,14 @@ func NewPodEventHandler(throttler Throttler, ctx context.Context) *PodEventHandl
 }
 
 func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
+	allStarted := false
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Started != nil && *containerStatus.Started {
-			p.throttler.ReleaseSlot(p.ctx, buildSlotName(pod))
+			allStarted = true
 		}
+	}
+	if allStarted {
+		p.throttler.ReleaseSlot(p.ctx, buildSlotName(pod))
 	}
 }
 
