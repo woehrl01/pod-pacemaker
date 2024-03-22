@@ -18,7 +18,7 @@ spec:
       initContainers:
         - name: init-cni
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          pullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - "./cni-init"
           args:
@@ -36,7 +36,7 @@ spec:
       containers:
         - name: node-daemon
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          pullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - "./node-daemon"
           args:
