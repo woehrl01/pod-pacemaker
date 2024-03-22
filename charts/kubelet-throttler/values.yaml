@@ -3,7 +3,7 @@ taintToRemove: pod-limiter
 
 debugLogging: false
 cni:
-  maxWaitTimeInSeconds: 10
+  maxWaitTimeInSeconds: 60
   primaryName: 10-aws.conflist
   mergedName: 00-merged-pod-startup-limiter.conflist
 
