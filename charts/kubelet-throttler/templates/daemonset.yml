@@ -23,8 +23,10 @@ spec:
           args:
             - "--cni-bin-dir=/opt/cni/bin"
             - "--cni-config-dir=/etc/cni/net.d"
-            - "--daemon-port={{ .Values.hostPort }}"
-            - "--max-wait-time-in-seconds={{ .Values.maxWaitTimeInSeconds }}"
+            - "--daemon-port={{ .Values.daemon.hostPort }}"
+            - "--max-wait-time-in-seconds={{ .Values.cni.maxWaitTimeInSeconds }}"
+            - "--primary-config-name={{ .Values.cni.primaryName }}"
+            - "--merged-config-name={{ .Values.cni.mergedName }}"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
@@ -38,7 +40,7 @@ spec:
           args:
             - "--throttler-limit={{ .Values.throttlerLimit }}"
             - "--taint-to-remove={{ .Values.taintToRemove }}"
-            - "--daemon-port={{ .Values.hostPort }}"
+            - "--daemon-port={{ .Values.daemon.hostPort }}"
             - "--debug-logging={{ .Values.debugLogging }}"
           env:
             - name: NODE_NAME
@@ -46,11 +48,11 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           ports:
-            - containerPort: {{ .Values.hostPort }}
+            - containerPort: {{ .Values.daemon.hostPort }}
               protocol: TCP
           livenessProbe:
             grpc:
-              port: {{ .Values.hostPort }}
+              port: {{ .Values.daemon.hostPort }}
             initialDelaySeconds: 10
       tolerations:
         - key: {{ .Values.taintToRemove }}

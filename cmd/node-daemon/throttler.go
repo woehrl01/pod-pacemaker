@@ -38,7 +38,7 @@ func (t *throttler) AquireSlot(ctx context.Context, slotId string) error {
 		}
 
 		if _, ok := t.mapping[slotId]; ok {
-			t.lock.Release(1) // already acquired
+			t.lock.Release(1)
 			logrus.Debugf("Slot %s already acquired", slotId)
 			return nil
 		}
