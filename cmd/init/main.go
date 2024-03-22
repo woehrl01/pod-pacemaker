@@ -36,9 +36,8 @@ func main() {
 		log.Fatalf("Failed to create target directory: %v", err)
 	}
 
+	// Copy the CNI plugin binary to a temporary file
 	targetTmpName := fmt.Sprintf("%s.tmp", targetPath)
-
-	// Copy the CNI plugin binary to the target location
 	if err := copyFile(sourcePath, targetTmpName); err != nil {
 		log.Fatalf("Failed to copy CNI plugin binary: %v", err)
 	}
