@@ -13,6 +13,7 @@ daemon:
 image:
   repository: ghcr.io/woehrl01/kubelet-throttler
   tag: latest
+  pullPolicy: IfNotPresent
 
 nodeSelector: {}
 
