@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"woehrl01/pod-pacemaker/pkg/throttler"
+
 	flag "github.com/spf13/pflag"
 
 	v1 "k8s.io/api/core/v1"
@@ -49,7 +51,11 @@ func main() {
 	stopper := make(chan struct{})
 	defer close(stopper)
 
-	throttler := NewThrottler(*throttlerLimit)
+	throttler := throttler.NewAllThrottler(clientset, &throttler.Options{
+		MaxConcurrency: *throttlerLimit,
+		RateLimit:      1,
+		RateBurst:      1,
+	})
 
 	startPodHandler(ctx, clientset, throttler, stopper, nodeName)
 	removeStartupTaint(clientset, nodeName)
@@ -58,7 +64,7 @@ func main() {
 	<-stopper
 }
 
-func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler Throttler, stopper chan struct{}, nodeName string) {
+func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, stopper chan struct{}, nodeName string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 	}))

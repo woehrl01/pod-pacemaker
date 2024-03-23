@@ -1,4 +1,4 @@
-package main
+package throttler
 
 import (
 	"context"
@@ -6,12 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
 )
-
-type Throttler interface {
-	AquireSlot(ctx context.Context, slotId string) error
-	FillSlot(ctx context.Context, slotId string)
-	ReleaseSlot(ctx context.Context, slotId string)
-}
 
 var _ Throttler = &throttler{}
 
@@ -22,7 +16,7 @@ type throttler struct {
 	isBlockedCh chan bool
 }
 
-func NewThrottler(limit int) Throttler {
+func NewUnorderedThrottler(limit int) Throttler {
 	return &throttler{
 		mapping:     make(map[string]bool),
 		limit:       limit,
@@ -31,7 +25,7 @@ func NewThrottler(limit int) Throttler {
 	}
 }
 
-func (t *throttler) AquireSlot(ctx context.Context, slotId string) error {
+func (t *throttler) AquireSlot(ctx context.Context, slotId string, _ Data) error {
 	for {
 		if err := t.lock.Acquire(ctx, 1); err != nil {
 			return err
@@ -55,20 +49,6 @@ func (t *throttler) AquireSlot(ctx context.Context, slotId string) error {
 		case <-ctx.Done():
 			return nil
 		case <-t.isBlockedCh:
-		}
-	}
-}
-
-func (t *throttler) FillSlot(ctx context.Context, slotId string) {
-	t.lock.Acquire(ctx, 1)
-	defer t.lock.Release(1)
-
-	if _, ok := t.mapping[slotId]; !ok {
-		t.mapping[slotId] = true
-		logrus.Debugf("Filling slot %s", slotId)
-		select {
-		case t.isBlockedCh <- false:
-		default:
 		}
 	}
 }

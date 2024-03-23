@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"woehrl01/pod-pacemaker/pkg/throttler"
+
 	log "github.com/sirupsen/logrus"
 
 	pb "woehrl01/pod-pacemaker/proto"
@@ -18,12 +20,12 @@ import (
 
 type podLimitService struct {
 	pb.UnimplementedPodLimiterServer
-	throttler Throttler
+	throttler throttler.Throttler
 }
 
 var _ pb.PodLimiterServer = &podLimitService{}
 
-func NewPodLimitersServer(throttler Throttler) *podLimitService {
+func NewPodLimitersServer(throttler throttler.Throttler) *podLimitService {
 	return &podLimitService{
 		throttler: throttler,
 	}
@@ -32,7 +34,7 @@ func NewPodLimitersServer(throttler Throttler) *podLimitService {
 func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.WaitResponse, error) {
 	log.Debugf("Received: %v", in.GetSlotName())
 	startTime := time.Now()
-	if err := s.throttler.AquireSlot(ctx, in.GetSlotName()); err != nil {
+	if err := s.throttler.AquireSlot(ctx, in.GetSlotName(), throttler.Data{}); err != nil {
 		log.Infof("Failed to acquire lock: %v", err)
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
 	}
@@ -44,7 +46,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 	return &pb.WaitResponse{Success: true, Message: "Waited successfully"}, nil
 }
 
-func startGrpcServer(throttler Throttler, port int) {
+func startGrpcServer(throttler throttler.Throttler, port int) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
