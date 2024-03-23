@@ -20,7 +20,7 @@ import (
 
 var (
 	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can start at the same time")
-	taintToRemove  = flag.String("taint-to-remove", "pod-limiter", "The taint to remove from the node")
+	taintToRemove  = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
 	daemonPort     = flag.Int("daemon-port", 50051, "The port for the node daemon")
 	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
 )
@@ -106,7 +106,7 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 	}
 
 	if len(newTaints) == len(node.Spec.Taints) {
-		log.Println("No taint 'pod-limiter' found on node, no update required.")
+		log.Println("No taint 'pod-pacemaker' found on node, no update required.")
 		return
 	}
 

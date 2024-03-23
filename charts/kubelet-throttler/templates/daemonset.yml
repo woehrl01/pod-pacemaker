@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: kubelet-throttler
+  name: pod-pacemaker
 spec:
   selector:
     matchLabels:
-      name: kubelet-throttler
+      name: pod-pacemaker
   template:
     metadata:
       labels:
-        name: kubelet-throttler
+        name: pod-pacemaker
       annotations:
         woehrl.net/skip-throttle: "true"
     spec:
-      serviceAccountName: kubelet-throttler
+      serviceAccountName: pod-pacemaker
       hostNetwork: true
       initContainers:
         - name: init-cni

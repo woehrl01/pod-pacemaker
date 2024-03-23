@@ -2,7 +2,7 @@ VERSION ?= v0.0.1
 REGISTRY ?= ghcr.io
 IMAGE_BUILDER ?= docker
 IMAGE_BUILD_CMD ?= build
-IMAGE_NAME ?= woehrl01/kubelet-throttler
+IMAGE_NAME ?= woehrl01/pod-pacemaker
 
 export IMG = $(REGISTRY)/$(IMAGE_NAME):$(VERSION)
 export CGO_ENABLED=0
@@ -36,4 +36,4 @@ docker-push:
 	$(IMAGE_BUILDER) push $(IMG)
 
 helm-render:
-	helm template charts/kubelet-throttler --set image.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.tag=$(VERSION)
+	helm template charts/pod-pacemaker --set image.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.tag=$(VERSION)

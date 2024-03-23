@@ -1,22 +1,22 @@
-# kubelet-throttler
+# pod-pacemaker
 
-kubelet-throttler is a Kubernetes tool designed to manage the rate at which pods are initiated on a specific node, providing a controlled environment for pod deployment. Unlike traditional methods that modify the application itself or utilize initContainers, kubelet-throttler offers a seamless integration without altering the pod's inherent configuration. This mechanism is particularly useful for ensuring system stability and efficiency by preventing resource saturation caused by the simultaneous startup of numerous pods. It effectively addresses the "thundering herd" problem, commonly encountered with Java or PHP processes, by managing the concurrency of pod startups.
+pod-pacemaker is a Kubernetes tool designed to manage the rate at which pods are initiated on a specific node, providing a controlled environment for pod deployment. Unlike traditional methods that modify the application itself or utilize initContainers, pod-pacemaker offers a seamless integration without altering the pod's inherent configuration. This mechanism is particularly useful for ensuring system stability and efficiency by preventing resource saturation caused by the simultaneous startup of numerous pods. It effectively addresses the "thundering herd" problem, commonly encountered with Java or PHP processes, by managing the concurrency of pod startups.
 
 ## How It Works
 
-kubelet-throttler operates as a CNI (Container Network Interface) plugin, embedding itself into the pod lifecycle at a critical early stage. By functioning at the CNI level, kubelet-throttler is able to intervene immediately after the scheduler's decision but before the pod's network setup is finalized. It strategically delays the creation of the pod sandbox, effectively spacing out pod initializations, mitigating potential stress on the node's resources.
+pod-pacemaker operates as a CNI (Container Network Interface) plugin, embedding itself into the pod lifecycle at a critical early stage. By functioning at the CNI level, pod-pacemaker is able to intervene immediately after the scheduler's decision but before the pod's network setup is finalized. It strategically delays the creation of the pod sandbox, effectively spacing out pod initializations, mitigating potential stress on the node's resources.
 
 ```mermaid
 sequenceDiagram
     participant S as Scheduler
     participant K as Kubelet
-    participant C as CNI Plugin (kubelet-throttler)
+    participant C as CNI Plugin (pod-pacemaker)
     participant D as DaemonSet (Logic Implementation)
     participant P as Pod Startup
 
     S->>K: Schedules Pod
     K->>C: Initiates Pod Network Setup
-    Note over C,D: kubelet-throttler communicates with DaemonSet
+    Note over C,D: pod-pacemaker communicates with DaemonSet
     C->>D: Requests Permission to Proceed
     D->>C: Grants/Denies Permission
     C->>P: Starts Pod Sandbox Creation (if permitted)
@@ -35,4 +35,4 @@ sequenceDiagram
 
 ## License
 
-kubelet-throttler is released under the MIT License.
+pod-pacemaker is released under the MIT License.

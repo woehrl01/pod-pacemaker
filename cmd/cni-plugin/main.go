@@ -54,11 +54,11 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 }
 
 func main() {
-	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("pod-startup-limiter"))
+	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("pod-pacemaker"))
 }
 
 func setupLogging() error {
-	filename := "/var/log/pod-startup-limiter.log"
+	filename := "/var/log/pod-pacemaker.log"
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
 		return err

@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	pb "woehrl01/kubelet-throttler/proto"
+	pb "woehrl01/pod-pacemaker/proto"
 
 	"google.golang.org/grpc/health"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"

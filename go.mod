@@ -1,4 +1,4 @@
-module woehrl01/kubelet-throttler
+module woehrl01/pod-pacemaker
 
 go 1.22.1
 

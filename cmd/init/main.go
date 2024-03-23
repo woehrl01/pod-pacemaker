@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	cniName              = flag.String("cni-name", "pod-startup-limiter", "The name of the CNI plugin")
-	cniType              = flag.String("cni-type", "pod-startup-limiter", "The type of the CNI plugin")
+	cniName              = flag.String("cni-name", "pod-pacemaker", "The name of the CNI plugin")
+	cniType              = flag.String("cni-type", "pod-pacemaker", "The type of the CNI plugin")
 	daemonPort           = flag.Int("daemon-port", 50051, "The port for the node daemon")
 	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 60, "The maximum wait time in seconds")
 	cniBinDir            = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
 	cniConfigDir         = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
 	primaryConfigName    = flag.String("primary-config-name", "10-aws.conflist", "The name of the primary CNI configuration file")
-	mergedConfigName     = flag.String("merged-config-name", "00-merged-pod-startup-limiter.conflist", "The name of the merged CNI configuration file")
+	mergedConfigName     = flag.String("merged-config-name", "00-merged-pod-pacemaker.conflist", "The name of the merged CNI configuration file")
 )
 
 func main() {
