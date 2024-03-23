@@ -37,3 +37,6 @@ docker-push:
 
 helm-render:
 	helm template charts/pod-pacemaker --set image.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.tag=$(VERSION)
+
+manifests:
+	controller-gen crd paths="./..." output:crd:artifacts:config=charts/pod-pacemaker/crds
