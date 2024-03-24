@@ -18,7 +18,7 @@ var (
 	cniName              = flag.String("cni-name", "pod-pacemaker", "The name of the CNI plugin")
 	cniType              = flag.String("cni-type", "pod-pacemaker", "The type of the CNI plugin")
 	daemonPort           = flag.Int("daemon-port", 50051, "The port for the node daemon")
-	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 60, "The maximum wait time in seconds")
+	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 120, "The maximum wait time in seconds")
 	cniBinDir            = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
 	cniConfigDir         = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
 	primaryConfigName    = flag.String("primary-config-name", "", "The name of the primary CNI configuration file (empty for automatic detection)")
@@ -32,6 +32,10 @@ func main() {
 	if *primaryConfigName == "" {
 		// Automatically detect the primary CNI configuration file
 		primaryConfigName = detectPrimaryConfigName(*cniConfigDir)
+	}
+
+	if *maxWaitTimeInSeconds > 220 {
+		log.Fatalf("max-wait-time-in-seconds must be less than or equal to 220, reason is the CNITimeoutSec of 4 minutes")
 	}
 
 	// Define the source and target paths for the CNI plugin binary

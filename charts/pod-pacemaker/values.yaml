@@ -2,7 +2,7 @@ taintToRemove: pod-pacemaker
 
 debugLogging: false
 cni:
-  maxWaitTimeInSeconds: 60
+  maxWaitTimeInSeconds: 120 # maximum is 220 seconds because of the default CNI timeout of 4 minutes
   mergedName: 00-merged-pod-pacemaker.conflist
 
 daemon:
