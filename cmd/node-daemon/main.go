@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"os"
 	"sort"
 	"time"
@@ -10,6 +12,7 @@ import (
 	"woehrl01/pod-pacemaker/pkg/podaccessor"
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/time/rate"
 
@@ -33,6 +36,7 @@ var (
 	daemonPort     = flag.Int("daemon-port", 50051, "The port for the node daemon")
 	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
 	skipDaemonSets = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
+	metricsPort    = flag.Int("metrics-port", 60313, "The port for the metrics server")
 )
 
 func main() {
@@ -66,6 +70,7 @@ func main() {
 	podAccessor := startPodHandler(ctx, clientset, throttler, nodeName, stopper)
 	startConfigHandler(config, dynamicThrottlers, nodeName, stopper)
 	removeStartupTaint(clientset, nodeName)
+	startPrometheusMetricsServer()
 	startGrpcServer(throttler, Options{
 		Port:           *daemonPort,
 		SkipDaemonSets: *skipDaemonSets,
@@ -232,4 +237,11 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 	if err != nil {
 		log.Fatalf("Failed to update node %s: %v", nodeName, err)
 	}
+}
+
+func startPrometheusMetricsServer() {
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil))
+	}()
 }
