@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"sort"
 	"time"
 
 	"woehrl01/pod-pacemaker/api/v1alpha"
@@ -113,11 +114,18 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 
 	updateAllThrottlers := func() {
 		allConfigs := informers.GetStore().List()
+
+		sort.Slice(allConfigs, func(i, j int) bool {
+			a := allConfigs[i].(*v1alpha.PacemakerConfig)
+			b := allConfigs[j].(*v1alpha.PacemakerConfig)
+			return a.Spec.Priority > b.Spec.Priority
+		})
+
 		var matchingConfig *v1alpha.PacemakerConfig
 		for _, config := range allConfigs {
 			config := config.(*v1alpha.PacemakerConfig)
 
-			// only select the config for the current node
+			// todo: only select the config for the current node
 			matchingConfig = config
 			break
 		}

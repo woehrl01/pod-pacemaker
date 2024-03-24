@@ -22,6 +22,7 @@ type PacemakerConfigSpec struct {
 	MatchNodeLabels     map[string]string  `json:"matchNodeLabels"`
 	ThrottleConfig      NodeThrottleConfig `json:"throttleConfig"`
 	NamespaceExclusions []string           `json:"namespaceExclusions"`
+	Priority            int                `json:"priority"`
 }
 
 type NodeThrottleConfig struct {
