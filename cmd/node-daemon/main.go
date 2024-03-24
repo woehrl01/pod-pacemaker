@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"woehrl01/pod-pacemaker/api/v1alpha"
+	"woehrl01/pod-pacemaker/pkg/podaccessor"
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
 	flag "github.com/spf13/pflag"
@@ -28,9 +29,10 @@ import (
 )
 
 var (
-	taintToRemove = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
-	daemonPort    = flag.Int("daemon-port", 50051, "The port for the node daemon")
-	debugLogging  = flag.Bool("debug-logging", false, "Enable debug logging")
+	taintToRemove  = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
+	daemonPort     = flag.Int("daemon-port", 50051, "The port for the node daemon")
+	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
+	skipDaemonSets = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
 )
 
 func main() {
@@ -61,15 +63,18 @@ func main() {
 
 	throttler := throttler.NewAllThrottler(dynamicThrottlers)
 
-	startPodHandler(ctx, clientset, throttler, nodeName, stopper)
+	podAccessor := startPodHandler(ctx, clientset, throttler, nodeName, stopper)
 	startConfigHandler(config, dynamicThrottlers, nodeName, stopper)
 	removeStartupTaint(clientset, nodeName)
-	startGrpcServer(throttler, *daemonPort)
+	startGrpcServer(throttler, Options{
+		Port:           *daemonPort,
+		SkipDaemonSets: *skipDaemonSets,
+	}, podAccessor)
 
 	<-stopper
 }
 
-func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, nodeName string, stopper chan struct{}) {
+func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, nodeName string, stopper chan struct{}) podaccessor.PodAccessor {
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 	}))
@@ -96,6 +101,8 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
 		log.Fatal("Failed to sync")
 	}
+
+	return podaccessor.NewLocalPodsAccessor(informer.GetIndexer())
 }
 
 func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.DynamicThrottler, nodeName string, stopper chan struct{}) {

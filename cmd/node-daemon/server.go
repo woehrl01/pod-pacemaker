@@ -6,9 +6,12 @@ import (
 	"net"
 	"time"
 
+	"woehrl01/pod-pacemaker/pkg/podaccessor"
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	pb "woehrl01/pod-pacemaker/proto"
 
@@ -20,21 +23,56 @@ import (
 
 type podLimitService struct {
 	pb.UnimplementedPodLimiterServer
-	throttler throttler.Throttler
+	throttler   throttler.Throttler
+	podAccessor podaccessor.PodAccessor
+	options     Options
+}
+
+type Options struct {
+	Port           int
+	SkipDaemonSets bool
 }
 
 var _ pb.PodLimiterServer = &podLimitService{}
 
-func NewPodLimitersServer(throttler throttler.Throttler) *podLimitService {
+func NewPodLimitersServer(throttler throttler.Throttler, podAccessor podaccessor.PodAccessor, o Options) *podLimitService {
 	return &podLimitService{
-		throttler: throttler,
+		throttler:   throttler,
+		podAccessor: podAccessor,
+		options:     o,
 	}
 }
 
 func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.WaitResponse, error) {
 	log.Debugf("Received: %v", in.GetSlotName())
 	startTime := time.Now()
-	if err := s.throttler.AquireSlot(ctx, in.GetSlotName(), throttler.Data{}); err != nil {
+
+	var pod *corev1.Pod
+	wait.PollUntilContextCancel(ctx, 500*time.Millisecond, true, func(ctx context.Context) (bool, error) {
+		p, err := s.podAccessor.GetPodByKey(in.GetSlotName())
+		if err != nil {
+			return false, nil
+		}
+		if p != nil {
+			pod = p
+		}
+		return pod != nil, nil
+	})
+	if pod == nil {
+		log.Infof("Failed to get pod: %v", in.GetSlotName())
+		return &pb.WaitResponse{Success: false, Message: "Failed to get pod"}, nil
+	}
+
+	data := throttler.Data{
+		Pod: pod,
+	}
+
+	if s.options.SkipDaemonSets && pod.ObjectMeta.OwnerReferences != nil && len(pod.ObjectMeta.OwnerReferences) > 0 && pod.ObjectMeta.OwnerReferences[0].Kind == "DaemonSet" {
+		log.Infof("Skipping daemonset: %v", pod.ObjectMeta.Name)
+		return &pb.WaitResponse{Success: true, Message: "Skipped daemonset"}, nil
+	}
+
+	if err := s.throttler.AquireSlot(ctx, in.GetSlotName(), data); err != nil {
 		log.Infof("Failed to acquire lock: %v", err)
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
 	}
@@ -46,8 +84,8 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 	return &pb.WaitResponse{Success: true, Message: "Waited successfully"}, nil
 }
 
-func startGrpcServer(throttler throttler.Throttler, port int) {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podaccessor.PodAccessor) {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", o.Port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -55,7 +93,7 @@ func startGrpcServer(throttler throttler.Throttler, port int) {
 	healthcheck := health.NewServer()
 	healthgrpc.RegisterHealthServer(s, healthcheck)
 
-	service := NewPodLimitersServer(throttler)
+	service := NewPodLimitersServer(throttler, podAccessor, o)
 
 	pb.RegisterPodLimiterServer(s, service)
 

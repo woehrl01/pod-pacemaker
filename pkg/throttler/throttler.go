@@ -1,9 +1,14 @@
 package throttler
 
-import "context"
+import (
+	"context"
+
+	v1 "k8s.io/api/core/v1"
+)
 
 type Data struct {
 	Priority int
+	Pod      *v1.Pod
 }
 
 type Throttler interface {
