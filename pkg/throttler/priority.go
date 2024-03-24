@@ -3,6 +3,7 @@ package throttler
 import (
 	"container/heap"
 	"context"
+	"fmt"
 	"runtime"
 	"sync"
 )
@@ -45,11 +46,12 @@ func (pq *PriorityQueue) Pop() interface{} {
 }
 
 type ConcurrencyController struct {
-	pq        PriorityQueue
-	mu        sync.Mutex
-	cond      *sync.Cond
-	condition func(int) bool
-	active    map[string]*Item
+	pq            PriorityQueue
+	mu            sync.Mutex
+	cond          *sync.Cond
+	condition     func(int) bool
+	conditionText string
+	active        map[string]*Item
 }
 
 func NewPriorityThrottler(staticLimit int, perCpu int) *ConcurrencyController {
@@ -57,10 +59,10 @@ func NewPriorityThrottler(staticLimit int, perCpu int) *ConcurrencyController {
 	if staticLimit == 0 {
 		limit = perCpu * runtime.NumCPU()
 	}
-	return NewConcurrencyControllerWithDynamicCondition(func(currentLength int) bool { return currentLength < limit })
+	return NewConcurrencyControllerWithDynamicCondition(func(currentLength int) bool { return currentLength < limit }, fmt.Sprintf("currentLength < %d", limit))
 }
 
-func NewConcurrencyControllerWithDynamicCondition(condition func(int) bool) *ConcurrencyController {
+func NewConcurrencyControllerWithDynamicCondition(condition func(int) bool, conditionText string) *ConcurrencyController {
 	cc := &ConcurrencyController{
 		pq:        make(PriorityQueue, 0),
 		condition: condition,
@@ -71,6 +73,10 @@ func NewConcurrencyControllerWithDynamicCondition(condition func(int) bool) *Con
 }
 
 var _ Throttler = &ConcurrencyController{}
+
+func (cc *ConcurrencyController) String() string {
+	return fmt.Sprintf("PriorityThrottler, condition: %s", cc.conditionText)
+}
 
 func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, data Data) error {
 	cc.mu.Lock()

@@ -2,6 +2,7 @@ package throttler
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
@@ -23,6 +24,10 @@ func NewUnorderedThrottler(limit int) Throttler {
 		lock:        semaphore.NewWeighted(int64(1)),
 		isBlockedCh: make(chan bool, 1),
 	}
+}
+
+func (t *throttler) String() string {
+	return fmt.Sprintf("UnorderedThrottler(limit=%d)", t.limit)
 }
 
 func (t *throttler) AquireSlot(ctx context.Context, slotId string, _ Data) error {

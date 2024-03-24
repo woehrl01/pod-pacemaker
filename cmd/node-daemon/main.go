@@ -5,13 +5,18 @@ import (
 	"os"
 	"time"
 
+	"woehrl01/pod-pacemaker/api/v1alpha"
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
 	flag "github.com/spf13/pflag"
+	"golang.org/x/time/rate"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -21,10 +26,9 @@ import (
 )
 
 var (
-	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can start at the same time")
-	taintToRemove  = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
-	daemonPort     = flag.Int("daemon-port", 50051, "The port for the node daemon")
-	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
+	taintToRemove = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
+	daemonPort    = flag.Int("daemon-port", 50051, "The port for the node daemon")
+	debugLogging  = flag.Bool("debug-logging", false, "Enable debug logging")
 )
 
 func main() {
@@ -51,13 +55,12 @@ func main() {
 	stopper := make(chan struct{})
 	defer close(stopper)
 
-	throttler := throttler.NewAllThrottler(clientset, &throttler.Options{
-		MaxConcurrency: *throttlerLimit,
-		RateLimit:      1,
-		RateBurst:      1,
-	})
+	dynamicThrottlers := throttler.NewDynamicThrottler()
+
+	throttler := throttler.NewAllThrottler(dynamicThrottlers)
 
 	startPodHandler(ctx, clientset, throttler, stopper, nodeName)
+	startConfigHandler(config, dynamicThrottlers, stopper)
 	removeStartupTaint(clientset, nodeName)
 	startGrpcServer(throttler, *daemonPort)
 
@@ -90,6 +93,87 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 
 	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
 		log.Fatal("Failed to sync")
+	}
+}
+
+func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.DynamicThrottler, stopper chan struct{}) {
+	gvr := schema.GroupVersionResource{
+		Group:    "woehrl.net",
+		Version:  "v1alpha",
+		Resource: "pacemakerconfigs",
+	}
+
+	dynClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	dynamicInformerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynClient, time.Minute, metav1.NamespaceAll, nil)
+	informers := dynamicInformerFactory.ForResource(gvr).Informer()
+
+	updateAllThrottlers := func() {
+		allConfigs := informers.GetStore().List()
+		var matchingConfig *v1alpha.PacemakerConfig
+		for _, config := range allConfigs {
+			config := config.(*v1alpha.PacemakerConfig)
+
+			// only select the config for the current node
+			matchingConfig = config
+			break
+		}
+
+		throttlers := make([]throttler.Throttler, 0, len(allConfigs))
+		if matchingConfig == nil {
+			log.Debug("No matching config found")
+			dynamicThrottlers.SetThrottlers(throttlers)
+			return
+		}
+
+		// rate limit first
+		if matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor > 0 && matchingConfig.Spec.ThrottleConfig.RateLimit.Burst > 0 {
+			throttlers = append(throttlers, throttler.NewRateLimitThrottler(rate.Every(time.Second/time.Duration(matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor)), matchingConfig.Spec.ThrottleConfig.RateLimit.Burst))
+		}
+
+		// then max concurrent
+		if matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value > 0 || matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore > 0 {
+			throttlers = append(throttlers, throttler.NewPriorityThrottler(matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value, matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore))
+		}
+
+		// then CPU load
+		if matchingConfig.Spec.ThrottleConfig.CpuThreshold > 0 {
+			throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(float64(matchingConfig.Spec.ThrottleConfig.CpuThreshold)))
+		}
+
+		// then I/O load
+		if matchingConfig.Spec.ThrottleConfig.MaxIOLoad > 0 {
+			throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad((float64(matchingConfig.Spec.ThrottleConfig.MaxIOLoad))))
+		}
+
+		// print debug output which throttlers are active
+		for _, t := range throttlers {
+			log.Debugf("Throttler %s is active", t)
+		}
+
+		dynamicThrottlers.SetThrottlers(throttlers)
+	}
+
+	informers.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			updateAllThrottlers()
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			updateAllThrottlers()
+		},
+		DeleteFunc: func(obj interface{}) {
+			updateAllThrottlers()
+		},
+	})
+
+	go informers.Run(stopper)
+
+	//wait for the initial synchronization of the local cache
+	if !cache.WaitForCacheSync(stopper, informers.HasSynced) {
+		panic("Failed to sync")
 	}
 }
 

@@ -1,6 +1,7 @@
 package throttler
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -13,7 +14,7 @@ func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad float64) *ConcurrencyContro
 			currentLoad = GetIoWait()
 		}
 	}()
-	return NewConcurrencyControllerWithDynamicCondition(func(int) bool { return currentLoad < maxIOLoad })
+	return NewConcurrencyControllerWithDynamicCondition(func(int) bool { return currentLoad < maxIOLoad }, fmt.Sprintf("currentIOLoad < %f", maxIOLoad))
 }
 
 func GetIoWait() float64 {

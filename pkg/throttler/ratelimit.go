@@ -2,6 +2,7 @@ package throttler
 
 import (
 	"context"
+	"fmt"
 
 	"golang.org/x/time/rate"
 )
@@ -24,4 +25,8 @@ func (t *RateLimitThrottler) AquireSlot(ctx context.Context, slotId string, _ Da
 }
 
 func (t *RateLimitThrottler) ReleaseSlot(ctx context.Context, slotId string) {
+}
+
+func (t *RateLimitThrottler) String() string {
+	return fmt.Sprintf("RateLimitThrottler(rate=%v, burst=%d)", t.rate.Limit(), t.rate.Burst())
 }
