@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -20,8 +21,9 @@ type PluginConf struct {
 		PodAnnotations map[string]string `json:"io.kubernetes.cri.pod-annotations"`
 	} `json:"runtimeConfig"`
 
-	DaemonPort           int32 `json:"daemonPort"`
-	MaxWaitTimeInSeconds int32 `json:"maxWaitTimeInSeconds"`
+	DaemonPort           int32    `json:"daemonPort"`
+	MaxWaitTimeInSeconds int32    `json:"maxWaitTimeInSeconds"`
+	NamespaceExclusions  []string `json:"namespaceExclusions"`
 }
 
 type K8sArgs struct {
@@ -130,11 +132,11 @@ func callChain(conf *PluginConf) (*current.Result, error) {
 }
 
 func shouldSkipThrotteling(conf *PluginConf, k8sArgs *K8sArgs) bool {
-	if v, ok := conf.RuntimeConfig.PodAnnotations["woehrl.net/skip-throttle"]; ok {
+	if v, ok := conf.RuntimeConfig.PodAnnotations["pod-pacemaker/skip"]; ok {
 		return v == "true"
 	}
 
-	if string(k8sArgs.K8S_POD_NAMESPACE) == "kube-system" {
+	if slices.Contains(conf.NamespaceExclusions, string(k8sArgs.K8S_POD_NAMESPACE)) {
 		return true
 	}
 

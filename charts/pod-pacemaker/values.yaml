@@ -1,10 +1,8 @@
-throttlerLimit: 10
 taintToRemove: pod-pacemaker
 
 debugLogging: false
 cni:
   maxWaitTimeInSeconds: 60
-  primaryName: 10-aws.conflist
   mergedName: 00-merged-pod-pacemaker.conflist
 
 daemon:
@@ -22,3 +20,13 @@ tolerations:
   - effect: "NoExecute"
 
 affinity: {}
+
+namespaceExclusions: 
+  - kube-system
+
+defaultThrottleConfig:
+  enabled: true
+  config:
+    maxConcurrent:
+      perCore: 2
+

@@ -34,14 +34,12 @@ spec:
           spec:
             description: Spec is the custom resource spec
             properties:
-              matchNodeLabels:
+              nodeSelector:
                 additionalProperties:
                   type: string
                 type: object
-              namespaceExclusions:
-                items:
-                  type: string
-                type: array
+              priority:
+                type: integer
               throttleConfig:
                 properties:
                   cpuThreshold:
@@ -74,8 +72,8 @@ spec:
                 - rateLimit
                 type: object
             required:
-            - matchNodeLabels
-            - namespaceExclusions
+            - nodeSelector
+            - priority
             - throttleConfig
             type: object
         type: object

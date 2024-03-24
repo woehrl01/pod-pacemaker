@@ -11,7 +11,7 @@ spec:
       labels:
         name: pod-pacemaker
       annotations:
-        woehrl.net/skip-throttle: "true"
+        pod-pacemaker/skip: "true"
     spec:
       serviceAccountName: pod-pacemaker
       hostNetwork: true
@@ -28,6 +28,7 @@ spec:
             - "--max-wait-time-in-seconds={{ .Values.cni.maxWaitTimeInSeconds }}"
             - "--primary-config-name={{ .Values.cni.primaryName }}"
             - "--merged-config-name={{ .Values.cni.mergedName }}"
+            - "--namespace-exclusions={{ join "," .Values.namespaceExclusions }}"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin

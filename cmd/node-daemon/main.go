@@ -15,6 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -60,15 +61,15 @@ func main() {
 
 	throttler := throttler.NewAllThrottler(dynamicThrottlers)
 
-	startPodHandler(ctx, clientset, throttler, stopper, nodeName)
-	startConfigHandler(config, dynamicThrottlers, stopper)
+	startPodHandler(ctx, clientset, throttler, nodeName, stopper)
+	startConfigHandler(config, dynamicThrottlers, nodeName, stopper)
 	removeStartupTaint(clientset, nodeName)
 	startGrpcServer(throttler, *daemonPort)
 
 	<-stopper
 }
 
-func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, stopper chan struct{}, nodeName string) {
+func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, nodeName string, stopper chan struct{}) {
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 	}))
@@ -97,23 +98,27 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	}
 }
 
-func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.DynamicThrottler, stopper chan struct{}) {
+func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.DynamicThrottler, nodeName string, stopper chan struct{}) {
 	gvr := schema.GroupVersionResource{
 		Group:    "woehrl.net",
 		Version:  "v1alpha",
 		Resource: "pacemakerconfigs",
 	}
 
-	dynClient, err := dynamic.NewForConfig(config)
-	if err != nil {
-		panic(err)
-	}
+	dynClient := dynamic.NewForConfigOrDie(config)
 
 	dynamicInformerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynClient, time.Minute, metav1.NamespaceAll, nil)
 	informers := dynamicInformerFactory.ForResource(gvr).Informer()
 
+	clientset := kubernetes.NewForConfigOrDie(config)
+
 	updateAllThrottlers := func() {
 		allConfigs := informers.GetStore().List()
+
+		node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			log.Fatalf("Failed to get node %s: %v", nodeName, err)
+		}
 
 		sort.Slice(allConfigs, func(i, j int) bool {
 			a := allConfigs[i].(*v1alpha.PacemakerConfig)
@@ -124,10 +129,13 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 		var matchingConfig *v1alpha.PacemakerConfig
 		for _, config := range allConfigs {
 			config := config.(*v1alpha.PacemakerConfig)
-
-			// todo: only select the config for the current node
+			labelSelector := labels.Set(config.Spec.NodeSelector).AsSelector()
+			if !labelSelector.Matches(labels.Set(node.Labels)) {
+				log.Debugf("Label selector %s does not match node labels %s", labelSelector, node.Labels)
+				continue
+			}
 			matchingConfig = config
-			break
+			break // we only need the highest priority config which matches
 		}
 
 		throttlers := make([]throttler.Throttler, 0, len(allConfigs))
@@ -157,7 +165,10 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 			throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad((float64(matchingConfig.Spec.ThrottleConfig.MaxIOLoad))))
 		}
 
-		// print debug output which throttlers are active
+		if len(throttlers) == 0 {
+			log.Debug("No throttlers found")
+		}
+
 		for _, t := range throttlers {
 			log.Debugf("Throttler %s is active", t)
 		}
