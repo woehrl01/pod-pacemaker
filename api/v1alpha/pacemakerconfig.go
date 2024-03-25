@@ -27,14 +27,14 @@ type PacemakerConfigSpec struct {
 }
 
 type NodeThrottleConfig struct {
-    // +kubebuilder:validation:Optional
-	RateLimit     RateLimitConfig     `json:"rateLimit"`
-    // +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
+	RateLimit RateLimitConfig `json:"rateLimit"`
+	// +kubebuilder:validation:Optional
 	MaxConcurrent MaxConcurrentConfig `json:"maxConcurrent"`
-    // +kubebuilder:validation:Optional
-	CpuThreshold  int                 `json:"cpuThreshold"`
-    // +kubebuilder:validation:Optional
-	MaxIOLoad     int                 `json:"maxIOLoad"`
+	// +kubebuilder:validation:Optional
+	CpuThreshold int `json:"cpuThreshold"`
+	// +kubebuilder:validation:Optional
+	MaxIOLoad int `json:"maxIOLoad"`
 }
 
 type RateLimitConfig struct {
@@ -44,17 +44,16 @@ type RateLimitConfig struct {
 
 type MaxConcurrentConfig struct {
 	// +kubebuilder:validation:Minimum=1
-    // +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	Value int `json:"value,omitempty"`
 	// +kubebuilder:validation:Minimum=1
-    // +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	PerCore int `json:"perCore,omitempty"`
 }
 
-
 func ConvertToPacemakerConfig(un *unstructured.Unstructured) (*PacemakerConfig, error) {
-    var config PacemakerConfig
+	var config PacemakerConfig
 	err := runtime.DefaultUnstructuredConverter.
-	    FromUnstructured(un.UnstructuredContent(), &config)
-    return &config, err
+		FromUnstructured(un.UnstructuredContent(), &config)
+	return &config, err
 }

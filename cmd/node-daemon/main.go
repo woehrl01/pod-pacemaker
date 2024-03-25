@@ -5,22 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"sort"
 	"time"
 
-	"woehrl01/pod-pacemaker/api/v1alpha"
 	"woehrl01/pod-pacemaker/pkg/podaccessor"
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	flag "github.com/spf13/pflag"
-	"golang.org/x/time/rate"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -76,7 +71,7 @@ func main() {
 	if *metricsEnabled {
 		startPrometheusMetricsServer()
 	}
-	
+
 	startGrpcServer(throttler, Options{
 		Port:           *daemonPort,
 		SkipDaemonSets: *skipDaemonSets,
@@ -125,96 +120,22 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 
 	dynClient := dynamic.NewForConfigOrDie(config)
 
-	dynamicInformerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynClient, time.Minute, metav1.NamespaceAll, nil)
+	dynamicInformerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynClient, 0 /*no resync*/, metav1.NamespaceAll, nil)
 	informers := dynamicInformerFactory.ForResource(gvr).Informer()
 
 	clientset := kubernetes.NewForConfigOrDie(config)
 
-	updateAllThrottlers := func() {
-		allConfigsUnstructured := informers.GetStore().List()
-
-		allConfigs := make([]*v1alpha.PacemakerConfig, 0, len(allConfigsUnstructured))
-		//convert from *unstructured.Unstructured to *v1alpha.PacemakerConfig
-		for _, config := range allConfigsUnstructured {
-			unstructured := config.(*unstructured.Unstructured)
-			config, err := v1alpha.ConvertToPacemakerConfig(unstructured)
-			if err != nil {
-				log.Fatalf("Failed to convert config %s: %v", unstructured.GetName(), err)
-			}
-			allConfigs = append(allConfigs, config)
-		}
-
-		node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
-		if err != nil {
-			log.Fatalf("Failed to get node %s: %v", nodeName, err)
-		}
-
-		sort.Slice(allConfigs, func(i, j int) bool {
-			a := allConfigs[i]
-			b := allConfigs[j]
-			return a.Spec.Priority > b.Spec.Priority
-		})
-
-		var matchingConfig *v1alpha.PacemakerConfig
-		for _, config := range allConfigs {
-			c := config
-			labelSelector := labels.Set(c.Spec.NodeSelector).AsSelector()
-			if !labelSelector.Matches(labels.Set(node.Labels)) {
-				log.Debugf("Label selector %s does not match node labels %s", labelSelector, node.Labels)
-				continue
-			}
-			log.Infof("Config %s matches node labels", c.Name)
-			matchingConfig = c
-			break // we only need the highest priority config which matches
-		}
-		
-		if matchingConfig == nil {
-			log.Infof("No matching config found")
-			dynamicThrottlers.SetThrottlers([]throttler.Throttler{})
-			return
-		}
-
-		throttlers := make([]throttler.Throttler, 0, len(allConfigs))
-		// rate limit first
-		if matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor > 0 && matchingConfig.Spec.ThrottleConfig.RateLimit.Burst > 0 {
-			throttlers = append(throttlers, throttler.NewRateLimitThrottler(rate.Every(time.Second/time.Duration(matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor)), matchingConfig.Spec.ThrottleConfig.RateLimit.Burst))
-		}
-
-		// then max concurrent
-		if matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value > 0 || matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore > 0 {
-			throttlers = append(throttlers, throttler.NewPriorityThrottler(matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value, matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore))
-		}
-
-		// then CPU load
-		if matchingConfig.Spec.ThrottleConfig.CpuThreshold > 0 {
-			throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(float64(matchingConfig.Spec.ThrottleConfig.CpuThreshold)))
-		}
-
-		// then I/O load
-		if matchingConfig.Spec.ThrottleConfig.MaxIOLoad > 0 {
-			throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad((float64(matchingConfig.Spec.ThrottleConfig.MaxIOLoad))))
-		}
-
-		if len(throttlers) == 0 {
-			log.Infof("No throttlers found")
-		}
-
-		for _, t := range throttlers {
-			log.Infof("Throttler %s is active", t)
-		}
-
-		dynamicThrottlers.SetThrottlers(throttlers)
-	}
+	handler := NewThrottlerConfigurator(informers, clientset, nodeName, dynamicThrottlers)
 
 	informers.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			updateAllThrottlers()
+			handler.Updatethrottlers()
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			updateAllThrottlers()
+			handler.Updatethrottlers()
 		},
 		DeleteFunc: func(obj interface{}) {
-			updateAllThrottlers()
+			handler.Updatethrottlers()
 		},
 	})
 

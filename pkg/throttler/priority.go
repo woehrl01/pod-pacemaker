@@ -59,14 +59,15 @@ func NewPriorityThrottler(staticLimit int, perCpu int) *ConcurrencyController {
 	if staticLimit == 0 {
 		limit = perCpu * runtime.NumCPU()
 	}
-	return NewConcurrencyControllerWithDynamicCondition(func(currentLength int) bool { return currentLength < limit }, fmt.Sprintf("currentLength < %d", limit))
+	return NewConcurrencyControllerWithDynamicCondition(func(currentLength int) bool { return currentLength < limit }, fmt.Sprintf("maxConcurrent = %d", limit))
 }
 
 func NewConcurrencyControllerWithDynamicCondition(condition func(int) bool, conditionText string) *ConcurrencyController {
 	cc := &ConcurrencyController{
-		pq:        make(PriorityQueue, 0),
-		condition: condition,
-		active:    make(map[string]*Item),
+		pq:            make(PriorityQueue, 0),
+		condition:     condition,
+		conditionText: conditionText,
+		active:        make(map[string]*Item),
 	}
 	cc.cond = sync.NewCond(&cc.mu)
 	return cc
