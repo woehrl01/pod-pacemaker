@@ -40,3 +40,8 @@ helm-render:
 
 manifests:
 	controller-gen crd paths="./..." output:crd:artifacts:config=charts/pod-pacemaker/crds
+
+helm-push:
+	helm package charts/pod-pacemaker --app-version $(VERSION) --version $(VERSION)
+	mv pod-pacemaker-*.tgz helm-pod-pacemaker-$(VERSION).tgz
+	helm push helm-pod-pacemaker-*.tgz oci://ghcr.io/woehrl01/pod-pacemaker

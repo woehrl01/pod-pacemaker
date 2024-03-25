@@ -46,3 +46,7 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'release'
         run: |
           VERSION=${{ steps.version.outputs.version }} make docker-push
+      - name: Publish Helm Chart
+        if: github.event_name == 'push' || github.event_name == 'release'
+        run: |
+          VERSION=${{ steps.version.outputs.version }} make helm-push

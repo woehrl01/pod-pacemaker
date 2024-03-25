@@ -12,7 +12,6 @@ daemon:
 
 image:
   repository: ghcr.io/woehrl01/pod-pacemaker
-  tag: latest
   pullPolicy: IfNotPresent
 
 nodeSelector: {}
