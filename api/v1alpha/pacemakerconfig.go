@@ -2,6 +2,8 @@ package v1alpha
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:object:root=true
@@ -47,4 +49,12 @@ type MaxConcurrentConfig struct {
 	// +kubebuilder:validation:Minimum=1
     // +kubebuilder:validation:Optional
 	PerCore int `json:"perCore,omitempty"`
+}
+
+
+func ConvertToPacemakerConfig(un *unstructured.Unstructured) (*PacemakerConfig, error) {
+    var config PacemakerConfig
+	err := runtime.DefaultUnstructuredConverter.
+	    FromUnstructured(un.UnstructuredContent(), &config)
+    return &config, err
 }

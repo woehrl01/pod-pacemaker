@@ -18,6 +18,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -130,7 +131,18 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 	clientset := kubernetes.NewForConfigOrDie(config)
 
 	updateAllThrottlers := func() {
-		allConfigs := informers.GetStore().List()
+		allConfigsUnstructured := informers.GetStore().List()
+
+		allConfigs := make([]*v1alpha.PacemakerConfig, 0, len(allConfigsUnstructured))
+		//convert from *unstructured.Unstructured to *v1alpha.PacemakerConfig
+		for i, config := range allConfigsUnstructured {
+			unstructured := config.(*unstructured.Unstructured)
+			config, err := v1alpha.ConvertToPacemakerConfig(unstructured)
+			if err != nil {
+				log.Fatalf("Failed to convert config %s: %v", unstructured.GetName(), err)
+			}
+			allConfigs[i] = config
+		}
 
 		node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 		if err != nil {
@@ -138,20 +150,20 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 		}
 
 		sort.Slice(allConfigs, func(i, j int) bool {
-			a := allConfigs[i].(*v1alpha.PacemakerConfig)
-			b := allConfigs[j].(*v1alpha.PacemakerConfig)
+			a := allConfigs[i]
+			b := allConfigs[j]
 			return a.Spec.Priority > b.Spec.Priority
 		})
 
 		var matchingConfig *v1alpha.PacemakerConfig
 		for _, config := range allConfigs {
-			config := config.(*v1alpha.PacemakerConfig)
-			labelSelector := labels.Set(config.Spec.NodeSelector).AsSelector()
+			c := config
+			labelSelector := labels.Set(c.Spec.NodeSelector).AsSelector()
 			if !labelSelector.Matches(labels.Set(node.Labels)) {
 				log.Debugf("Label selector %s does not match node labels %s", labelSelector, node.Labels)
 				continue
 			}
-			matchingConfig = config
+			matchingConfig = c
 			break // we only need the highest priority config which matches
 		}
 
