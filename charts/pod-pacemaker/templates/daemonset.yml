@@ -17,14 +17,14 @@ spec:
         app.kubernetes.io/instance: pod-pacemaker
         app.kubernetes.io/version: {{ .Chart.AppVersion }}
         {{- with .Values.podLabels }}
-        {{ toYaml . | nindent 8 }}
+        {{ toYaml . | nindent 10 }}
         {{ end }}
       annotations:
         pod-pacemaker/skip: "true"
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.daemon.metricsPort }}"
         {{- with .Values.podAnnotations }}
-        {{ toYaml . | nindent 8 }}
+        {{ toYaml . | nindent 10 }}
         {{ end }}
     spec:
       serviceAccountName: pod-pacemaker
