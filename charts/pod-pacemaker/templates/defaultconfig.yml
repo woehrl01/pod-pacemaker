@@ -4,7 +4,7 @@ kind: PacemakerConfig
 metadata:
   name: default-pacemaker-config
 spec:
-  priority: -1
+  priority: 0
   nodeSelector: {}
   throttleConfig: {{ .Values.defaultThrottleConfig.config | toYaml | nindent 4 }}
 {{ end }}
