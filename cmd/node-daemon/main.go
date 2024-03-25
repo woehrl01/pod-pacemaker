@@ -195,11 +195,11 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 		}
 
 		if len(throttlers) == 0 {
-			log.Debug("No throttlers found")
+			log.Infof("No throttlers found")
 		}
 
 		for _, t := range throttlers {
-			log.Debugf("Throttler %s is active", t)
+			log.Infof("Throttler %s is active", t)
 		}
 
 		dynamicThrottlers.SetThrottlers(throttlers)
