@@ -47,6 +47,7 @@ spec:
             - "--primary-config-name={{ .Values.cni.primaryName }}"
             - "--merged-config-name={{ .Values.cni.mergedName }}"
             - "--namespace-exclusions={{ join "," .Values.namespaceExclusions }}"
+            - "--success-on-connection-timeout={{ .Values.cni.successOnConnectionTimeout }}"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
@@ -77,6 +78,10 @@ spec:
             grpc:
               port: {{ .Values.daemon.hostPort }}
             initialDelaySeconds: 10
+          {{- with .Values.resources }}
+          resources:
+            {{ toYaml . | nindent 12 }}
+          {{ end }}
       tolerations:
         - key: {{ .Values.taintToRemove }}
           effect: NoSchedule

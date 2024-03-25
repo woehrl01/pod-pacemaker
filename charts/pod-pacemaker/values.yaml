@@ -22,6 +22,8 @@ image:
 
 nodeSelector: {}
 
+resources: {}
+
 tolerations: 
   - effect: "NoSchedule"
   - effect: "NoExecute"
