@@ -75,6 +75,9 @@ The `throttleConfig` section comprises four key types of throttling parameters, 
 
    - `maxLoad`: Defines the maximum I/O load that is permissible. Similar to CPU throttling, this setting helps prevent I/O saturation, ensuring that the system remains responsive and stable during pod initialization. e.g. `0.5` means 50% of I/O usage.
 
+> [!NOTE]
+> If using the `cpu` or `io` throttling options, consider it in combination with the other throttling options, as the current resource usage will be only calculated as an average of the last 5 seconds.
+
 ### Exclude Pods
 
 #### Annotation
@@ -100,7 +103,7 @@ You can exclude pods from a specific namespace by specifying the namespaces in t
 
 ### Summary
 
-By configuring these four types of throttling parameters within the `PacemakerConfig` resource, administrators can finely tune how resources are allocated and consumed, ensuring that critical services receive the resources they need while maintaining overall system stability and performance. This level of control is essential for managing workloads in dynamic, distributed environments like Kubernetes.
+By configuring these four types of throttling parameters within the `PacemakerConfig` resource, administrators can finely tune how resources are allocated and consumed, ensuring that critical services receive the resources they need while maintaining overall system stability and performance.
 
 ## License
 
