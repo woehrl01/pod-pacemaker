@@ -219,6 +219,10 @@ func detectPrimaryConfigName(configDir string) *string {
 	for _, file := range files {
 		if !file.IsDir() {
 			name := file.Name()
+			//skip if it's the merged config file
+			if name == *mergedConfigName {
+				continue
+			}
 			if filepath.Ext(name) == ".conf" || filepath.Ext(name) == ".conflist" {
 				log.Infof("Primary CNI configuration file detected: %s", name)
 				return &name
