@@ -163,17 +163,18 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 				log.Debugf("Label selector %s does not match node labels %s", labelSelector, node.Labels)
 				continue
 			}
+			log.Infof("Config %s matches node labels", c.Name)
 			matchingConfig = c
 			break // we only need the highest priority config which matches
 		}
-
-		throttlers := make([]throttler.Throttler, 0, len(allConfigs))
+		
 		if matchingConfig == nil {
-			log.Debug("No matching config found")
-			dynamicThrottlers.SetThrottlers(throttlers)
+			log.Infof("No matching config found")
+			dynamicThrottlers.SetThrottlers([]throttler.Throttler{})
 			return
 		}
 
+		throttlers := make([]throttler.Throttler, 0, len(allConfigs))
 		// rate limit first
 		if matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor > 0 && matchingConfig.Spec.ThrottleConfig.RateLimit.Burst > 0 {
 			throttlers = append(throttlers, throttler.NewRateLimitThrottler(rate.Every(time.Second/time.Duration(matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor)), matchingConfig.Spec.ThrottleConfig.RateLimit.Burst))
