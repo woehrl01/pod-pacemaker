@@ -4,12 +4,10 @@ import (
 	"context"
 	"sort"
 	"sync"
-	"time"
 	"woehrl01/pod-pacemaker/api/v1alpha"
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/time/rate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -53,8 +51,8 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 
 	throttlers := []throttler.Throttler{}
 	// rate limit first
-	if matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor > 0 && matchingConfig.Spec.ThrottleConfig.RateLimit.Burst > 0 {
-		throttlers = append(throttlers, throttler.NewRateLimitThrottler(rate.Every(time.Second/time.Duration(matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor)), matchingConfig.Spec.ThrottleConfig.RateLimit.Burst))
+	if matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor != "" && matchingConfig.Spec.ThrottleConfig.RateLimit.Burst > 0 {
+		throttlers = append(throttlers, throttler.NewRateLimitThrottler(matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor, matchingConfig.Spec.ThrottleConfig.RateLimit.Burst))
 	}
 
 	// then max concurrent

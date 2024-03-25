@@ -3,7 +3,9 @@ package throttler
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -11,9 +13,13 @@ type RateLimitThrottler struct {
 	rate *rate.Limiter
 }
 
-func NewRateLimitThrottler(r rate.Limit, burst int) *RateLimitThrottler {
+func NewRateLimitThrottler(r string, burst int) *RateLimitThrottler {
+	dur, err := time.ParseDuration(r)
+	if err != nil {
+		logrus.Fatalf("failed to parse rate limit duration: %s", r)
+	}
 	return &RateLimitThrottler{
-		rate: rate.NewLimiter(r, burst),
+		rate: rate.NewLimiter(rate.Every(dur), burst),
 	}
 }
 

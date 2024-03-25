@@ -49,20 +49,20 @@ The `throttleConfig` section comprises four key types of throttling parameters, 
 1. **Rate Limiting (`rateLimit`)**:
 
    - `burst`: The maximum number of pods that can be started in a burst. This parameter helps in controlling the rate of pod initialization, preventing sudden spikes in resource consumption that could lead to performance degradation.
-   - `fillFactor`: Controls the rate at which the allowed burst is refilled. By specifying a fill factor, administrators can fine-tune the pace of pod initialization, ensuring a balanced and controlled deployment process.
+   - `fillFactor`: Controls the rate at which the allowed burst is refilled. e.g. `1s` means one pod per second.
 
 2. **Concurrency Throttling (`maxConcurrent`)**:
 
-   - `perCore`: The maximum number of concurrent pod starts allowed per CPU core.
+   - `perCore`: The maximum number of concurrent pod starts allowed per CPU core. e.g. `0.5` means 0.5 pods per core.
    - `value`: An overall cap on the number of concurrent pods starting simultaneously. This is a fixed limit. For a more dynamic approach, consider using `perCore` instead.
 
 3. **CPU Throttling (`cpu`)**:
 
-   - `maxLoad`: Specifies the maximum CPU load allowed. This setting aims to prevent overutilization of CPU resources, ensuring that the system remains responsive and stable when starting new pods.
+   - `maxLoad`: Specifies the maximum CPU load allowed. This setting aims to prevent overutilization of CPU resources, ensuring that the system remains responsive and stable when starting new pods. e.g. `0.8` means 80% of CPU usage.
 
 4. **I/O Throttling (`io`)**:
 
-   - `maxLoad`: Defines the maximum I/O load that is permissible. Similar to CPU throttling, this setting helps prevent I/O saturation, ensuring that the system remains responsive and stable during pod initialization.
+   - `maxLoad`: Defines the maximum I/O load that is permissible. Similar to CPU throttling, this setting helps prevent I/O saturation, ensuring that the system remains responsive and stable during pod initialization. e.g. `0.5` means 50% of I/O usage.
 
 ### Summary
 

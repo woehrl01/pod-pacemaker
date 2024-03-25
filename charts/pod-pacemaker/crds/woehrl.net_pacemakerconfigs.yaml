@@ -69,7 +69,7 @@ spec:
                       burst:
                         type: integer
                       fillFactor:
-                        type: integer
+                        type: string
                     required:
                     - burst
                     - fillFactor

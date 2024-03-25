@@ -38,8 +38,8 @@ type NodeThrottleConfig struct {
 }
 
 type RateLimitConfig struct {
-	FillFactor int `json:"fillFactor"`
-	Burst      int `json:"burst"`
+	FillFactor string `json:"fillFactor"`
+	Burst      int    `json:"burst"`
 }
 
 type Cpu struct {
