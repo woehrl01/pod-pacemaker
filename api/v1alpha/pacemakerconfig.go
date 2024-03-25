@@ -25,9 +25,13 @@ type PacemakerConfigSpec struct {
 }
 
 type NodeThrottleConfig struct {
+    // +kubebuilder:validation:Optional
 	RateLimit     RateLimitConfig     `json:"rateLimit"`
+    // +kubebuilder:validation:Optional
 	MaxConcurrent MaxConcurrentConfig `json:"maxConcurrent"`
+    // +kubebuilder:validation:Optional
 	CpuThreshold  int                 `json:"cpuThreshold"`
+    // +kubebuilder:validation:Optional
 	MaxIOLoad     int                 `json:"maxIOLoad"`
 }
 
@@ -38,7 +42,9 @@ type RateLimitConfig struct {
 
 type MaxConcurrentConfig struct {
 	// +kubebuilder:validation:Minimum=1
+    // +kubebuilder:validation:Optional
 	Value int `json:"value,omitempty"`
 	// +kubebuilder:validation:Minimum=1
+    // +kubebuilder:validation:Optional
 	PerCore int `json:"perCore,omitempty"`
 }
