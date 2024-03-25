@@ -74,6 +74,29 @@ The `throttleConfig` section comprises four key types of throttling parameters, 
 
    - `maxLoad`: Defines the maximum I/O load that is permissible. Similar to CPU throttling, this setting helps prevent I/O saturation, ensuring that the system remains responsive and stable during pod initialization. e.g. `0.5` means 50% of I/O usage.
 
+### Exclude Pods
+
+#### Annotation
+
+You can exclude specific pods from the throttling mechanism by adding the `pod-pacemaker/skip: "true"` annotation to the pod's metadata. This annotation instructs PodPacemaker to bypass the throttling mechanism for the specified pod, allowing it to start without any restrictions.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  annotations:
+    pod-pacemaker/skip: "true"
+```
+
+#### DaemonSet
+
+You can also exclude pods if they are part of a DaemonSet. By adding configuring `--skip-daemonsets=true` in the `node-daemon` container arguments, PodPacemaker will skip DaemonSet pods. This is enabled by default.
+
+#### Namespace
+
+You can exclude pods from a specific namespace by specifying the namespaces in the `--namespace-exclusions` flag in the `init-cni` container arguments. By default, the `kube-system` namespace is excluded.
+
 ### Summary
 
 By configuring these four types of throttling parameters within the `PacemakerConfig` resource, administrators can finely tune how resources are allocated and consumed, ensuring that critical services receive the resources they need while maintaining overall system stability and performance. This level of control is essential for managing workloads in dynamic, distributed environments like Kubernetes.

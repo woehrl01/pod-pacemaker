@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Item struct {
@@ -59,11 +61,17 @@ type ConcurrencyController struct {
 func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController {
 	limit := staticLimit
 	limitType := "static"
-	if staticLimit == 0 {
+	if staticLimit == 0 && perCpu != "" {
 		perCpuFloat, _ := strconv.ParseFloat(perCpu, 64)
 		limit = int(math.Ceil(perCpuFloat * float64(runtime.NumCPU())))
 		limitType = fmt.Sprintf("perCpu = %s", perCpu)
 	}
+
+	if limit < 1 {
+		logrus.Warnf("Concurrency limit is too low, setting to 1")
+		limit = 1
+	}
+
 	c, _ := NewConcurrencyControllerWithDynamicCondition(func(currentLength int) (bool, error) { return currentLength < limit, nil }, fmt.Sprintf("maxConcurrent = %d, %s", limit, limitType))
 	return c
 }

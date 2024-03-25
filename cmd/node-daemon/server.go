@@ -99,7 +99,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 		waitFailedCounter.WithLabelValues("failed_to_acquire_lock").Inc()
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
 	}
-	
+
 	duration := time.Since(startTime)
 	log.WithFields(log.Fields{
 		"duration": duration,

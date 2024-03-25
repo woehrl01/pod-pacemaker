@@ -9,6 +9,7 @@ daemon:
   hostPort: 60312
   metricsPort: 60313
   metricsEnabled: true
+  skipDaemonsets: true
 
 image:
   repository: ghcr.io/woehrl01/pod-pacemaker
