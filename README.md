@@ -44,6 +44,9 @@ The easiest way to install PodPacemaker is by using the provided Helm chart. The
 helm install pod-pacemaker oci://ghcr.io/woehrl01/pod-pacemaker/pod-pacemaker --version 1.2.0
 ```
 
+> [!NOTE]
+> If you want to uninstall PodPacemaker, you have to manually delete the `/etc/cni/net.d/00-merged-pod-pacemaker.conflist` file from all nodes you have installed PodPacemaker on. This is necessary to remove the CNI plugin from the system, which cannot be done automatically by Helm.
+
 ## Configuration
 
 The `PacemakerConfig` Custom Resource Definition (CRD) provides a flexible way to define throttling configurations. Within the `throttleConfig` section of a `PacemakerConfig` resource, you can specify detailed settings that influence how throttling is applied. This flexibility allows for fine-tuned control over resource consumption, ensuring critical applications have the necessary resources while preventing any single workload from monopolizing cluster resources.
