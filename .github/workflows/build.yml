@@ -6,6 +6,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "README.md"
+      - "docs/**"
+      - ".github/**"
   release:
     types: [created]
   pull_request:
