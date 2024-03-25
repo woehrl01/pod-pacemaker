@@ -33,6 +33,16 @@ sequenceDiagram
 
 - **New Pod Creation Only:** It is designed to control the initiation of new pods. It does not apply to pods that are restarting due to crashes or OOM kills. As such, it is focused on initial deployment scenarios rather than recovery or error-handling situations.
 
+## Installation
+
+### Helm Chart
+
+The easiest way to install PodPacemaker is by using the provided Helm chart. The chart includes all the necessary components to deploy PodPacemaker on your Kubernetes cluster.
+
+```bash
+helm install pod-pacemaker oci://ghcr.io/woehrl01/pod-pacemaker/pod-pacemaker --version 1.2.0
+```
+
 ## Configuration
 
 The `PacemakerConfig` Custom Resource Definition (CRD) provides a flexible way to define throttling configurations. Within the `throttleConfig` section of a `PacemakerConfig` resource, you can specify detailed settings that influence how throttling is applied. This flexibility allows for fine-tuned control over resource consumption, ensuring critical applications have the necessary resources while preventing any single workload from monopolizing cluster resources.
