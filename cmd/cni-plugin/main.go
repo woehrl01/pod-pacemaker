@@ -21,9 +21,10 @@ type PluginConf struct {
 		PodAnnotations map[string]string `json:"io.kubernetes.cri.pod-annotations"`
 	} `json:"runtimeConfig"`
 
-	DaemonPort           int32    `json:"daemonPort"`
-	MaxWaitTimeInSeconds int32    `json:"maxWaitTimeInSeconds"`
-	NamespaceExclusions  []string `json:"namespaceExclusions"`
+	DaemonPort                 int32    `json:"daemonPort"`
+	MaxWaitTimeInSeconds       int32    `json:"maxWaitTimeInSeconds"`
+	NamespaceExclusions        []string `json:"namespaceExclusions"`
+	SuccessOnConnectionTimeout bool     `json:"successOnConnectionTimeout"`
 }
 
 type K8sArgs struct {

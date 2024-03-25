@@ -3,6 +3,7 @@ taintToRemove: pod-pacemaker
 debugLogging: false
 cni:
   maxWaitTimeInSeconds: 120 # maximum is 220 seconds because of the default CNI timeout of 4 minutes
+  successOnConnectionTimeout: true
   mergedName: 00-merged-pod-pacemaker.conflist
 
 daemon:
@@ -35,4 +36,3 @@ defaultThrottleConfig:
   config:
     maxConcurrent:
       perCore: "0.5"
-

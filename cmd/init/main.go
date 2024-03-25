@@ -15,15 +15,16 @@ import (
 )
 
 var (
-	cniName              = flag.String("cni-name", "pod-pacemaker", "The name of the CNI plugin")
-	cniType              = flag.String("cni-type", "pod-pacemaker", "The type of the CNI plugin")
-	daemonPort           = flag.Int("daemon-port", 50051, "The port for the node daemon")
-	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 120, "The maximum wait time in seconds")
-	cniBinDir            = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
-	cniConfigDir         = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
-	primaryConfigName    = flag.String("primary-config-name", "", "The name of the primary CNI configuration file (empty for automatic detection)")
-	mergedConfigName     = flag.String("merged-config-name", "00-merged-pod-pacemaker.conflist", "The name of the merged CNI configuration file")
-	namespaceExclusions  = flag.StringSlice("namespace-exclusions", []string{"kube-system"}, "Namespaces to exclude from the CNI configuration")
+	cniName                    = flag.String("cni-name", "pod-pacemaker", "The name of the CNI plugin")
+	cniType                    = flag.String("cni-type", "pod-pacemaker", "The type of the CNI plugin")
+	daemonPort                 = flag.Int("daemon-port", 50051, "The port for the node daemon")
+	maxWaitTimeInSeconds       = flag.Int32("max-wait-time-in-seconds", 120, "The maximum wait time in seconds")
+	cniBinDir                  = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
+	cniConfigDir               = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
+	primaryConfigName          = flag.String("primary-config-name", "", "The name of the primary CNI configuration file (empty for automatic detection)")
+	mergedConfigName           = flag.String("merged-config-name", "00-merged-pod-pacemaker.conflist", "The name of the merged CNI configuration file")
+	namespaceExclusions        = flag.StringSlice("namespace-exclusions", []string{"kube-system"}, "Namespaces to exclude from the CNI configuration")
+	successOnConnectionTimeout = flag.Bool("success-on-connection-timeout", true, "If true, there is no concurrency enforcement if the connection to the daemon times out")
 )
 
 func main() {
@@ -118,9 +119,10 @@ func generateCNIConfig(filePath string) error {
 				Capabilities: CniConfigCapabilities{
 					PodAnnotations: true,
 				},
-				DaemonPort:           *daemonPort,
-				MaxWaitTimeInSeconds: *maxWaitTimeInSeconds,
-				NamespaceExclusions:  *namespaceExclusions,
+				DaemonPort:                 *daemonPort,
+				MaxWaitTimeInSeconds:       *maxWaitTimeInSeconds,
+				NamespaceExclusions:        *namespaceExclusions,
+				SuccessOnConnectionTimeout: *successOnConnectionTimeout,
 			},
 		},
 	}
@@ -141,12 +143,13 @@ type CniConfigList struct {
 }
 
 type CniPlugin struct {
-	Name                 string                `json:"name"`
-	Type                 string                `json:"type"`
-	Capabilities         CniConfigCapabilities `json:"capabilities"`
-	DaemonPort           int                   `json:"daemonPort"`
-	MaxWaitTimeInSeconds int32                 `json:"maxWaitTimeInSeconds"`
-	NamespaceExclusions  []string              `json:"namespaceExclusions"`
+	Name                       string                `json:"name"`
+	Type                       string                `json:"type"`
+	Capabilities               CniConfigCapabilities `json:"capabilities"`
+	DaemonPort                 int                   `json:"daemonPort"`
+	MaxWaitTimeInSeconds       int32                 `json:"maxWaitTimeInSeconds"`
+	NamespaceExclusions        []string              `json:"namespaceExclusions"`
+	SuccessOnConnectionTimeout bool                  `json:"successOnConnectionTimeout"`
 }
 
 type CniConfigCapabilities struct {
