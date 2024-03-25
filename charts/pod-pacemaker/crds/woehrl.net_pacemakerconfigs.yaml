@@ -45,14 +45,14 @@ spec:
                   cpu:
                     properties:
                       maxLoad:
-                        type: integer
+                        type: string
                     required:
                     - maxLoad
                     type: object
                   io:
                     properties:
                       maxLoad:
-                        type: integer
+                        type: string
                     required:
                     - maxLoad
                     type: object

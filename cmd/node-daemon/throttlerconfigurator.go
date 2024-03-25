@@ -77,7 +77,7 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 	}
 
 	for _, t := range throttlers {
-		log.Infof("Throttler %s is active", t)
+		log.Infof("Throttler is active: %s", t)
 	}
 
 	t.dynamicThrottlers.SetThrottlers(throttlers)
