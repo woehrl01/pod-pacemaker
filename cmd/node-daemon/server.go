@@ -80,7 +80,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 		return true, nil
 	})
 	if pod == nil {
-		log.Infof("Failed to get pod: %v", in.GetSlotName())
+		log.Warnf("Failed to get pod: %v", in.GetSlotName())
 		waitFailedCounter.WithLabelValues("pod_not_found").Inc()
 		return &pb.WaitResponse{Success: false, Message: "Failed to get pod"}, nil
 	}
@@ -90,20 +90,21 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 	}
 
 	if s.options.SkipDaemonSets && pod.ObjectMeta.OwnerReferences != nil && len(pod.ObjectMeta.OwnerReferences) > 0 && pod.ObjectMeta.OwnerReferences[0].Kind == "DaemonSet" {
-		log.Infof("Skipping daemonset: %v", pod.ObjectMeta.Name)
+		log.Debugf("Skipping daemonset: %v", pod.ObjectMeta.Name)
 		return &pb.WaitResponse{Success: true, Message: "Skipped daemonset"}, nil
 	}
 
 	if err := s.throttler.AquireSlot(ctx, in.GetSlotName(), data); err != nil {
-		log.Infof("Failed to acquire lock: %v", err)
+		log.Debugf("Failed to acquire lock: %v", err)
 		waitFailedCounter.WithLabelValues("failed_to_acquire_lock").Inc()
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
 	}
+	
 	duration := time.Since(startTime)
 	log.WithFields(log.Fields{
 		"duration": duration,
 		"slot":     in.GetSlotName(),
-	}).Info("Acquired slot")
+	}).Debug("Acquired slot")
 
 	waitTimeHistogram.Observe(duration.Seconds())
 
