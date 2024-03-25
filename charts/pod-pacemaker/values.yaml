@@ -11,6 +11,10 @@ daemon:
   metricsEnabled: true
   skipDaemonsets: true
 
+podAnnotations: {}
+
+podLabels: {}
+
 image:
   repository: ghcr.io/woehrl01/pod-pacemaker
   pullPolicy: IfNotPresent
