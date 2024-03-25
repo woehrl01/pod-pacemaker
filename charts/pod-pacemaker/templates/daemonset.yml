@@ -2,9 +2,10 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: pod-pacemaker
-  app.kubernetes.io/name: pod-pacemaker
-  app.kubernetes.io/instance: pod-pacemaker
-  app.kubernetes.io/version: {{ .Chart.AppVersion }}
+  labels:
+    app.kubernetes.io/name: pod-pacemaker
+    app.kubernetes.io/instance: pod-pacemaker
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
 spec:
   selector:
     matchLabels:
