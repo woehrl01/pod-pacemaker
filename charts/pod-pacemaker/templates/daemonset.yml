@@ -43,7 +43,6 @@ spec:
           command:
             - "./node-daemon"
           args:
-            - "--throttler-limit={{ .Values.throttlerLimit }}"
             - "--taint-to-remove={{ .Values.taintToRemove }}"
             - "--daemon-port={{ .Values.daemon.hostPort }}"
             - "--debug-logging={{ .Values.debugLogging }}"
