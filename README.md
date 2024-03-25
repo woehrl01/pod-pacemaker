@@ -54,11 +54,12 @@ The `PacemakerConfig` Custom Resource Definition (CRD) provides a flexible way t
 ### PacemakerConfig Resource
 
 `nodeSelector`: A map of key-value pairs used for selecting the nodes where the throttling configuration will apply. This allows targeting specific nodes based on labels.
+
 `priority`: An integer value that defines the priority of the configuration. Higher values indicate higher priority, allowing certain configurations to take precedence over others.
 
 ### Throttling Configuration Options
 
-The `throttleConfig` section comprises four key types of throttling parameters, each targeting different aspects of system performance. If you configure multiple algorithms in the same configuration. They are applied in the following order: `rateLimit`, `maxConcurrent`, `cpu`, and `io`.
+The `throttleConfig` section comprises four key types of throttling parameters, each targeting different aspects of system performance. If you configure multiple algorithms in the same configuration, they are applied in the following order: `rateLimit`, `maxConcurrent`, `cpu`, and `io`.
 
 1. **Rate Limiting (`rateLimit`)**:
 
