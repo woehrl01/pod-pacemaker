@@ -12,7 +12,6 @@ daemon:
   skipDaemonsets: true
 
 podAnnotations: {}
-
 podLabels: {}
 
 image:
