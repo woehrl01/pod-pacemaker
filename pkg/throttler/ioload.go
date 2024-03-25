@@ -2,18 +2,24 @@ package throttler
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/sirupsen/logrus"
 )
 
-func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad float64, close chan struct{}) *ConcurrencyController {
+func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad string, close chan struct{}) *ConcurrencyController {
 	currentLoad := 0.0
 	var err error
 	err = nil
 
-	c, updated := NewConcurrencyControllerWithDynamicCondition(func(int) (bool, error) { return currentLoad < maxIOLoad, err }, fmt.Sprintf("current IO Load < %f", maxIOLoad))
+	maxIOLoadf, err := strconv.ParseFloat(maxIOLoad, 64)
+	if err != nil {
+		logrus.Fatalf("failed to parse maxCpuLoad: %s", maxIOLoad)
+	}
+
+	c, updated := NewConcurrencyControllerWithDynamicCondition(func(int) (bool, error) { return currentLoad < maxIOLoadf, err }, fmt.Sprintf("current IO Load < %s", maxIOLoad))
 
 	go func() {
 		for {

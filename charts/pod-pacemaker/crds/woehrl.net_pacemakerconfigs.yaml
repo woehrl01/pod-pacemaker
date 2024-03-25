@@ -42,8 +42,20 @@ spec:
                 type: integer
               throttleConfig:
                 properties:
-                  cpuThreshold:
-                    type: integer
+                  cpu:
+                    properties:
+                      maxLoad:
+                        type: integer
+                    required:
+                    - maxLoad
+                    type: object
+                  io:
+                    properties:
+                      maxLoad:
+                        type: integer
+                    required:
+                    - maxLoad
+                    type: object
                   maxConcurrent:
                     properties:
                       perCore:
@@ -52,8 +64,6 @@ spec:
                         minimum: 1
                         type: integer
                     type: object
-                  maxIOLoad:
-                    type: integer
                   rateLimit:
                     properties:
                       burst:

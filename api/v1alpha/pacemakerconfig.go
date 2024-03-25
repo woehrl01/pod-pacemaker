@@ -32,14 +32,22 @@ type NodeThrottleConfig struct {
 	// +kubebuilder:validation:Optional
 	MaxConcurrent MaxConcurrentConfig `json:"maxConcurrent"`
 	// +kubebuilder:validation:Optional
-	CpuThreshold int `json:"cpuThreshold"`
+	Cpu Cpu `json:"cpu"`
 	// +kubebuilder:validation:Optional
-	MaxIOLoad int `json:"maxIOLoad"`
+	IO IO `json:"io"`
 }
 
 type RateLimitConfig struct {
 	FillFactor int `json:"fillFactor"`
 	Burst      int `json:"burst"`
+}
+
+type Cpu struct {
+	MaxLoad string `json:"maxLoad"`
+}
+
+type IO struct {
+	MaxLoad string `json:"maxLoad"`
 }
 
 type MaxConcurrentConfig struct {

@@ -60,7 +60,7 @@ func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController
 	limit := staticLimit
 	limitType := "static"
 	if staticLimit == 0 {
-		perCpuFloat, _ := strconv.ParseFloat(perCpu, 64);
+		perCpuFloat, _ := strconv.ParseFloat(perCpu, 64)
 		limit = int(math.Ceil(perCpuFloat * float64(runtime.NumCPU())))
 		limitType = fmt.Sprintf("perCpu = %s", perCpu)
 	}

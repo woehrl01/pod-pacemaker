@@ -63,13 +63,13 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 	}
 
 	// then CPU load
-	if matchingConfig.Spec.ThrottleConfig.CpuThreshold > 0 {
-		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(float64(matchingConfig.Spec.ThrottleConfig.CpuThreshold), t.currentCloseChannel))
+	if matchingConfig.Spec.ThrottleConfig.Cpu.MaxLoad != "" {
+		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(matchingConfig.Spec.ThrottleConfig.Cpu.MaxLoad, t.currentCloseChannel))
 	}
 
 	// then I/O load
-	if matchingConfig.Spec.ThrottleConfig.MaxIOLoad > 0 {
-		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad(float64(matchingConfig.Spec.ThrottleConfig.MaxIOLoad), t.currentCloseChannel))
+	if matchingConfig.Spec.ThrottleConfig.IO.MaxLoad != "" {
+		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad(matchingConfig.Spec.ThrottleConfig.IO.MaxLoad, t.currentCloseChannel))
 	}
 
 	if len(throttlers) == 0 {
