@@ -13,6 +13,7 @@ daemon:
 
 podAnnotations: {}
 podLabels: {}
+priorityClassName: "system-node-critical"
 
 image:
   repository: ghcr.io/woehrl01/pod-pacemaker

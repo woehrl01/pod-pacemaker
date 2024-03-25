@@ -30,6 +30,9 @@ spec:
     spec:
       serviceAccountName: pod-pacemaker
       hostNetwork: true
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{ end }}
       initContainers:
         - name: init-cni
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
