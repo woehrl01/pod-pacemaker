@@ -135,13 +135,13 @@ func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.Dynamic
 
 		allConfigs := make([]*v1alpha.PacemakerConfig, 0, len(allConfigsUnstructured))
 		//convert from *unstructured.Unstructured to *v1alpha.PacemakerConfig
-		for i, config := range allConfigsUnstructured {
+		for _, config := range allConfigsUnstructured {
 			unstructured := config.(*unstructured.Unstructured)
 			config, err := v1alpha.ConvertToPacemakerConfig(unstructured)
 			if err != nil {
 				log.Fatalf("Failed to convert config %s: %v", unstructured.GetName(), err)
 			}
-			allConfigs[i] = config
+			allConfigs = append(allConfigs, config)
 		}
 
 		node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
