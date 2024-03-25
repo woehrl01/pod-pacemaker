@@ -47,8 +47,7 @@ spec:
                   maxConcurrent:
                     properties:
                       perCore:
-                        minimum: 1
-                        type: integer
+                        type: string
                       value:
                         minimum: 1
                         type: integer

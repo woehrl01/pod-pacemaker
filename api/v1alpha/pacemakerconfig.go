@@ -46,9 +46,8 @@ type MaxConcurrentConfig struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Optional
 	Value int `json:"value,omitempty"`
-	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Optional
-	PerCore int `json:"perCore,omitempty"`
+	PerCore string `json:"perCore,omitempty"`
 }
 
 func ConvertToPacemakerConfig(un *unstructured.Unstructured) (*PacemakerConfig, error) {

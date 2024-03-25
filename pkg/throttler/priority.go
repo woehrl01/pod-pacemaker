@@ -4,7 +4,9 @@ import (
 	"container/heap"
 	"context"
 	"fmt"
+	"math"
 	"runtime"
+	"strconv"
 	"sync"
 )
 
@@ -54,12 +56,13 @@ type ConcurrencyController struct {
 	active        map[string]*Item
 }
 
-func NewPriorityThrottler(staticLimit int, perCpu int) *ConcurrencyController {
+func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController {
 	limit := staticLimit
 	limitType := "static"
 	if staticLimit == 0 {
-		limit = perCpu * runtime.NumCPU()
-		limitType = fmt.Sprintf("perCpu = %d", perCpu)
+		perCpuFloat, _ := strconv.ParseFloat(perCpu, 64);
+		limit = int(math.Ceil(perCpuFloat * float64(runtime.NumCPU())))
+		limitType = fmt.Sprintf("perCpu = %s", perCpu)
 	}
 	c, _ := NewConcurrencyControllerWithDynamicCondition(func(currentLength int) (bool, error) { return currentLength < limit, nil }, fmt.Sprintf("maxConcurrent = %d, %s", limit, limitType))
 	return c

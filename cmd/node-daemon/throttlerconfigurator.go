@@ -58,7 +58,7 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 	}
 
 	// then max concurrent
-	if matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value > 0 || matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore > 0 {
+	if matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value > 0 || matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore != "" {
 		throttlers = append(throttlers, throttler.NewPriorityThrottler(matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value, matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore))
 	}
 

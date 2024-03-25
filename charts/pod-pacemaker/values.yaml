@@ -30,5 +30,5 @@ defaultThrottleConfig:
   enabled: true
   config:
     maxConcurrent:
-      perCore: 2
+      perCore: "0.5"
 
