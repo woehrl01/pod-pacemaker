@@ -56,10 +56,12 @@ type ConcurrencyController struct {
 
 func NewPriorityThrottler(staticLimit int, perCpu int) *ConcurrencyController {
 	limit := staticLimit
+	limitType := "static"
 	if staticLimit == 0 {
 		limit = perCpu * runtime.NumCPU()
+		limitType = fmt.Sprintf("perCpu = %d", perCpu)
 	}
-	return NewConcurrencyControllerWithDynamicCondition(func(currentLength int) bool { return currentLength < limit }, fmt.Sprintf("maxConcurrent = %d", limit))
+	return NewConcurrencyControllerWithDynamicCondition(func(currentLength int) bool { return currentLength < limit }, fmt.Sprintf("maxConcurrent = %d, %s", limit, limitType))
 }
 
 func NewConcurrencyControllerWithDynamicCondition(condition func(int) bool, conditionText string) *ConcurrencyController {
