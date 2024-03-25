@@ -48,6 +48,7 @@ spec:
             - "--daemon-port={{ .Values.daemon.hostPort }}"
             - "--debug-logging={{ .Values.debugLogging }}"
             - "--metrics-port={{ .Values.daemon.metricsPort }}"
+            - "--metrics-enabled={{ .Values.daemon.metricsEnabled }}"
           env:
             - name: NODE_NAME
               valueFrom:

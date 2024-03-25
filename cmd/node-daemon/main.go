@@ -37,6 +37,7 @@ var (
 	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
 	skipDaemonSets = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
 	metricsPort    = flag.Int("metrics-port", 60313, "The port for the metrics server")
+	metricsEnabled = flag.Bool("metrics-enabled", true, "Enable the metrics server")
 )
 
 func main() {
@@ -70,7 +71,11 @@ func main() {
 	podAccessor := startPodHandler(ctx, clientset, throttler, nodeName, stopper)
 	startConfigHandler(config, dynamicThrottlers, nodeName, stopper)
 	removeStartupTaint(clientset, nodeName)
-	startPrometheusMetricsServer()
+
+	if *metricsEnabled {
+		startPrometheusMetricsServer()
+	}
+	
 	startGrpcServer(throttler, Options{
 		Port:           *daemonPort,
 		SkipDaemonSets: *skipDaemonSets,
