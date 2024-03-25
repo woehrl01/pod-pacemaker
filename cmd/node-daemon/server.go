@@ -100,6 +100,12 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
 	}
 
+	if ctx.Err() != nil {
+		log.Debugf("Context cancelled")
+		waitFailedCounter.WithLabelValues("context_cancelled").Inc()
+		return &pb.WaitResponse{Success: false, Message: "Context cancelled"}, nil
+	}
+
 	duration := time.Since(startTime)
 	log.WithFields(log.Fields{
 		"duration": duration,
