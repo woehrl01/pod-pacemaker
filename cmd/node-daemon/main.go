@@ -2,14 +2,27 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"os"
+	"sort"
 	"time"
 
+	"woehrl01/pod-pacemaker/api/v1alpha"
+	"woehrl01/pod-pacemaker/pkg/podaccessor"
+	"woehrl01/pod-pacemaker/pkg/throttler"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	flag "github.com/spf13/pflag"
+	"golang.org/x/time/rate"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -19,10 +32,12 @@ import (
 )
 
 var (
-	throttlerLimit = flag.Int("throttler-limit", 10, "The maximum number of pods that can start at the same time")
-	taintToRemove  = flag.String("taint-to-remove", "pod-limiter", "The taint to remove from the node")
+	taintToRemove  = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
 	daemonPort     = flag.Int("daemon-port", 50051, "The port for the node daemon")
 	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
+	skipDaemonSets = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
+	metricsPort    = flag.Int("metrics-port", 60313, "The port for the metrics server")
+	metricsEnabled = flag.Bool("metrics-enabled", true, "Enable the metrics server")
 )
 
 func main() {
@@ -49,16 +64,27 @@ func main() {
 	stopper := make(chan struct{})
 	defer close(stopper)
 
-	throttler := NewThrottler(*throttlerLimit)
+	dynamicThrottlers := throttler.NewDynamicThrottler()
 
-	startPodHandler(ctx, clientset, throttler, stopper, nodeName)
+	throttler := throttler.NewAllThrottler(dynamicThrottlers)
+
+	podAccessor := startPodHandler(ctx, clientset, throttler, nodeName, stopper)
+	startConfigHandler(config, dynamicThrottlers, nodeName, stopper)
 	removeStartupTaint(clientset, nodeName)
-	startGrpcServer(throttler, *daemonPort)
+
+	if *metricsEnabled {
+		startPrometheusMetricsServer()
+	}
+	
+	startGrpcServer(throttler, Options{
+		Port:           *daemonPort,
+		SkipDaemonSets: *skipDaemonSets,
+	}, podAccessor)
 
 	<-stopper
 }
 
-func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler Throttler, stopper chan struct{}, nodeName string) {
+func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, nodeName string, stopper chan struct{}) podaccessor.PodAccessor {
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 	}))
@@ -85,6 +111,106 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
 		log.Fatal("Failed to sync")
 	}
+
+	return podaccessor.NewLocalPodsAccessor(informer.GetIndexer())
+}
+
+func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.DynamicThrottler, nodeName string, stopper chan struct{}) {
+	gvr := schema.GroupVersionResource{
+		Group:    "woehrl.net",
+		Version:  "v1alpha",
+		Resource: "pacemakerconfigs",
+	}
+
+	dynClient := dynamic.NewForConfigOrDie(config)
+
+	dynamicInformerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynClient, time.Minute, metav1.NamespaceAll, nil)
+	informers := dynamicInformerFactory.ForResource(gvr).Informer()
+
+	clientset := kubernetes.NewForConfigOrDie(config)
+
+	updateAllThrottlers := func() {
+		allConfigs := informers.GetStore().List()
+
+		node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			log.Fatalf("Failed to get node %s: %v", nodeName, err)
+		}
+
+		sort.Slice(allConfigs, func(i, j int) bool {
+			a := allConfigs[i].(*v1alpha.PacemakerConfig)
+			b := allConfigs[j].(*v1alpha.PacemakerConfig)
+			return a.Spec.Priority > b.Spec.Priority
+		})
+
+		var matchingConfig *v1alpha.PacemakerConfig
+		for _, config := range allConfigs {
+			config := config.(*v1alpha.PacemakerConfig)
+			labelSelector := labels.Set(config.Spec.NodeSelector).AsSelector()
+			if !labelSelector.Matches(labels.Set(node.Labels)) {
+				log.Debugf("Label selector %s does not match node labels %s", labelSelector, node.Labels)
+				continue
+			}
+			matchingConfig = config
+			break // we only need the highest priority config which matches
+		}
+
+		throttlers := make([]throttler.Throttler, 0, len(allConfigs))
+		if matchingConfig == nil {
+			log.Debug("No matching config found")
+			dynamicThrottlers.SetThrottlers(throttlers)
+			return
+		}
+
+		// rate limit first
+		if matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor > 0 && matchingConfig.Spec.ThrottleConfig.RateLimit.Burst > 0 {
+			throttlers = append(throttlers, throttler.NewRateLimitThrottler(rate.Every(time.Second/time.Duration(matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor)), matchingConfig.Spec.ThrottleConfig.RateLimit.Burst))
+		}
+
+		// then max concurrent
+		if matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value > 0 || matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore > 0 {
+			throttlers = append(throttlers, throttler.NewPriorityThrottler(matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value, matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore))
+		}
+
+		// then CPU load
+		if matchingConfig.Spec.ThrottleConfig.CpuThreshold > 0 {
+			throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(float64(matchingConfig.Spec.ThrottleConfig.CpuThreshold)))
+		}
+
+		// then I/O load
+		if matchingConfig.Spec.ThrottleConfig.MaxIOLoad > 0 {
+			throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad((float64(matchingConfig.Spec.ThrottleConfig.MaxIOLoad))))
+		}
+
+		if len(throttlers) == 0 {
+			log.Debug("No throttlers found")
+		}
+
+		for _, t := range throttlers {
+			log.Debugf("Throttler %s is active", t)
+		}
+
+		dynamicThrottlers.SetThrottlers(throttlers)
+	}
+
+	informers.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			updateAllThrottlers()
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			updateAllThrottlers()
+		},
+		DeleteFunc: func(obj interface{}) {
+			updateAllThrottlers()
+		},
+	})
+
+	go informers.Run(stopper)
+
+	//wait for the initial synchronization of the local cache
+	if !cache.WaitForCacheSync(stopper, informers.HasSynced) {
+		panic("Failed to sync")
+	}
 }
 
 func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
@@ -106,7 +232,7 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 	}
 
 	if len(newTaints) == len(node.Spec.Taints) {
-		log.Println("No taint 'pod-limiter' found on node, no update required.")
+		log.Println("No taint 'pod-pacemaker' found on node, no update required.")
 		return
 	}
 
@@ -116,4 +242,11 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 	if err != nil {
 		log.Fatalf("Failed to update node %s: %v", nodeName, err)
 	}
+}
+
+func startPrometheusMetricsServer() {
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil))
+	}()
 }

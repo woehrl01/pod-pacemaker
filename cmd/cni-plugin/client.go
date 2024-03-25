@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "woehrl01/kubelet-throttler/proto"
+	pb "woehrl01/pod-pacemaker/proto"
 )
 
 func WaitForSlot(slotName string, config *PluginConf) error {

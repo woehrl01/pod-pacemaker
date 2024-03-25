@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"woehrl01/pod-pacemaker/pkg/throttler"
+
 	v1 "k8s.io/api/core/v1"
 )
 
 type PodEventHandler struct {
-	throttler Throttler
+	throttler throttler.Throttler
 	ctx       context.Context
 }
 
-func NewPodEventHandler(throttler Throttler, ctx context.Context) *PodEventHandler {
+func NewPodEventHandler(throttler throttler.Throttler, ctx context.Context) *PodEventHandler {
 	return &PodEventHandler{
 		throttler: throttler,
 		ctx:       ctx,

@@ -1,6 +1,6 @@
 apiVersion: v2
-name: kubelet-throttler
-description: A Helm chart for kubelet-throttler
+name: pod-pacemaker
+description: A Helm chart for pod-pacemaker
 
 # A chart can be either an 'application' or a 'library' chart.
 #

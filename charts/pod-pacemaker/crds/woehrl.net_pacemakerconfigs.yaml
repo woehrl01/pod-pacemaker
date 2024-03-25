@@ -1,0 +1,83 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.2
+  creationTimestamp: null
+  name: pacemakerconfigs.woehrl.net
+spec:
+  group: woehrl.net
+  names:
+    kind: PacemakerConfig
+    listKind: PacemakerConfigList
+    plural: pacemakerconfigs
+    singular: pacemakerconfig
+  scope: Cluster
+  versions:
+  - name: v1alpha
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec is the custom resource spec
+            properties:
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                type: object
+              priority:
+                type: integer
+              throttleConfig:
+                properties:
+                  cpuThreshold:
+                    type: integer
+                  maxConcurrent:
+                    properties:
+                      perCore:
+                        minimum: 1
+                        type: integer
+                      value:
+                        minimum: 1
+                        type: integer
+                    type: object
+                  maxIOLoad:
+                    type: integer
+                  rateLimit:
+                    properties:
+                      burst:
+                        type: integer
+                      fillFactor:
+                        type: integer
+                    required:
+                    - burst
+                    - fillFactor
+                    type: object
+                required:
+                - cpuThreshold
+                - maxConcurrent
+                - maxIOLoad
+                - rateLimit
+                type: object
+            required:
+            - nodeSelector
+            - priority
+            - throttleConfig
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

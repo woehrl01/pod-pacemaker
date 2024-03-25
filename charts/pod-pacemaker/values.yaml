@@ -1,0 +1,34 @@
+taintToRemove: pod-pacemaker
+
+debugLogging: false
+cni:
+  maxWaitTimeInSeconds: 120 # maximum is 220 seconds because of the default CNI timeout of 4 minutes
+  mergedName: 00-merged-pod-pacemaker.conflist
+
+daemon:
+  hostPort: 60312
+  metricsPort: 60313
+  metricsEnabled: true
+
+image:
+  repository: ghcr.io/woehrl01/pod-pacemaker
+  tag: latest
+  pullPolicy: IfNotPresent
+
+nodeSelector: {}
+
+tolerations: 
+  - effect: "NoSchedule"
+  - effect: "NoExecute"
+
+affinity: {}
+
+namespaceExclusions: 
+  - kube-system
+
+defaultThrottleConfig:
+  enabled: true
+  config:
+    maxConcurrent:
+      perCore: 2
+

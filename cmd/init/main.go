@@ -3,28 +3,40 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	flag "github.com/spf13/pflag"
 
 	"io"
-	"log"
 	"os"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
-	cniName              = flag.String("cni-name", "pod-startup-limiter", "The name of the CNI plugin")
-	cniType              = flag.String("cni-type", "pod-startup-limiter", "The type of the CNI plugin")
+	cniName              = flag.String("cni-name", "pod-pacemaker", "The name of the CNI plugin")
+	cniType              = flag.String("cni-type", "pod-pacemaker", "The type of the CNI plugin")
 	daemonPort           = flag.Int("daemon-port", 50051, "The port for the node daemon")
-	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 60, "The maximum wait time in seconds")
+	maxWaitTimeInSeconds = flag.Int32("max-wait-time-in-seconds", 120, "The maximum wait time in seconds")
 	cniBinDir            = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
 	cniConfigDir         = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
-	primaryConfigName    = flag.String("primary-config-name", "10-aws.conflist", "The name of the primary CNI configuration file")
-	mergedConfigName     = flag.String("merged-config-name", "00-merged-pod-startup-limiter.conflist", "The name of the merged CNI configuration file")
+	primaryConfigName    = flag.String("primary-config-name", "", "The name of the primary CNI configuration file (empty for automatic detection)")
+	mergedConfigName     = flag.String("merged-config-name", "00-merged-pod-pacemaker.conflist", "The name of the merged CNI configuration file")
+	namespaceExclusions  = flag.StringSlice("namespace-exclusions", []string{"kube-system"}, "Namespaces to exclude from the CNI configuration")
 )
 
 func main() {
 	flag.Parse()
+
+	if *primaryConfigName == "" {
+		// Automatically detect the primary CNI configuration file
+		primaryConfigName = detectPrimaryConfigName(*cniConfigDir)
+	}
+
+	if *maxWaitTimeInSeconds > 220 {
+		log.Fatalf("max-wait-time-in-seconds must be less than or equal to 220, reason is the CNITimeoutSec of 4 minutes")
+	}
 
 	// Define the source and target paths for the CNI plugin binary
 	sourcePath := "/root/cni-plugin"
@@ -108,6 +120,7 @@ func generateCNIConfig(filePath string) error {
 				},
 				DaemonPort:           *daemonPort,
 				MaxWaitTimeInSeconds: *maxWaitTimeInSeconds,
+				NamespaceExclusions:  *namespaceExclusions,
 			},
 		},
 	}
@@ -133,6 +146,7 @@ type CniPlugin struct {
 	Capabilities         CniConfigCapabilities `json:"capabilities"`
 	DaemonPort           int                   `json:"daemonPort"`
 	MaxWaitTimeInSeconds int32                 `json:"maxWaitTimeInSeconds"`
+	NamespaceExclusions  []string              `json:"namespaceExclusions"`
 }
 
 type CniConfigCapabilities struct {
@@ -189,5 +203,29 @@ func mergeTwoConfigs(configFile1, configFile2, outputFile string) error {
 		return err
 	}
 
+	return nil
+}
+
+func detectPrimaryConfigName(configDir string) *string {
+	files, err := os.ReadDir(configDir)
+	if err != nil {
+		log.Fatalf("Failed to read CNI configuration directory: %v", err)
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name() < files[j].Name()
+	})
+
+	for _, file := range files {
+		if !file.IsDir() {
+			name := file.Name()
+			if filepath.Ext(name) == ".conf" || filepath.Ext(name) == ".conflist" {
+				log.Infof("Primary CNI configuration file detected: %s", name)
+				return &name
+			}
+		}
+	}
+
+	log.Fatalf("No primary CNI configuration file found in %s. Either configure the name explicitly or the primary CNI setup hasn't been finished, yet.", configDir)
 	return nil
 }
