@@ -10,19 +10,26 @@ import (
 
 func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad float64, close chan struct{}) *ConcurrencyController {
 	currentLoad := 0.0
+	var err error
+	err = nil
+
+	c, updated := NewConcurrencyControllerWithDynamicCondition(func(int) (bool, error) { return currentLoad < maxIOLoad, err }, fmt.Sprintf("current IO Load < %f", maxIOLoad))
+
 	go func() {
 		for {
 			select {
 			case <-close:
 				logrus.Info("closing IO load monitor")
+				err = fmt.Errorf("closing IO load monitor")
 				return
 			default:
 				currentLoad = GetIoWait()
+				updated()
 				logrus.Debugf("current IO load: %f", currentLoad)
 			}
 		}
 	}()
-	return NewConcurrencyControllerWithDynamicCondition(func(int) bool { return currentLoad < maxIOLoad }, fmt.Sprintf("current IO Load < %f", maxIOLoad))
+	return c
 }
 
 func GetIoWait() float64 {

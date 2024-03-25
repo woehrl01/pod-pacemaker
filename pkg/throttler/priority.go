@@ -49,7 +49,7 @@ type ConcurrencyController struct {
 	pq            PriorityQueue
 	mu            sync.Mutex
 	cond          *sync.Cond
-	condition     func(int) bool
+	condition     func(int) (bool, error)
 	conditionText string
 	active        map[string]*Item
 }
@@ -61,10 +61,11 @@ func NewPriorityThrottler(staticLimit int, perCpu int) *ConcurrencyController {
 		limit = perCpu * runtime.NumCPU()
 		limitType = fmt.Sprintf("perCpu = %d", perCpu)
 	}
-	return NewConcurrencyControllerWithDynamicCondition(func(currentLength int) bool { return currentLength < limit }, fmt.Sprintf("maxConcurrent = %d, %s", limit, limitType))
+	c, _ := NewConcurrencyControllerWithDynamicCondition(func(currentLength int) (bool, error) { return currentLength < limit, nil }, fmt.Sprintf("maxConcurrent = %d, %s", limit, limitType))
+	return c
 }
 
-func NewConcurrencyControllerWithDynamicCondition(condition func(int) bool, conditionText string) *ConcurrencyController {
+func NewConcurrencyControllerWithDynamicCondition(condition func(int) (bool, error), conditionText string) (*ConcurrencyController, func()) {
 	cc := &ConcurrencyController{
 		pq:            make(PriorityQueue, 0),
 		condition:     condition,
@@ -72,7 +73,9 @@ func NewConcurrencyControllerWithDynamicCondition(condition func(int) bool, cond
 		active:        make(map[string]*Item),
 	}
 	cc.cond = sync.NewCond(&cc.mu)
-	return cc
+	return cc, func() {
+		cc.cond.Broadcast()
+	}
 }
 
 var _ Throttler = &ConcurrencyController{}
@@ -101,10 +104,17 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 			cc.mu.Unlock()
 			return ctx.Err()
 		}
-		if active == nil && cc.condition(len(cc.active)) {
-			cc.active[slotId] = item
-			cc.mu.Unlock()
-			return nil
+		if active == nil {
+			cond, err := cc.condition(len(cc.active))
+			if err != nil {
+				cc.mu.Unlock()
+				return err
+			}
+			if cond {
+				cc.active[slotId] = item
+				cc.mu.Unlock()
+				return nil
+			}
 		}
 		cc.mu.Unlock()
 		select {
