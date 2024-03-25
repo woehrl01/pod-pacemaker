@@ -43,32 +43,69 @@ spec:
               throttleConfig:
                 properties:
                   cpu:
+                    description: Configures a limitting strategy based on the CPU
+                      load of the node
                     properties:
+                      incrementBy:
+                        description: Sets the increment by which the CPU load will
+                          be increased by a starting pod until the next measurement
+                          refresh
+                        pattern: ^[0-9]+(\.[0-9]+)?$
+                        type: string
                       maxLoad:
+                        description: Sets the limit of CPU load percentage that should
+                          not be exceeded
+                        pattern: ^[0-9]+(\.[0-9]+)?$
                         type: string
                     required:
                     - maxLoad
                     type: object
                   io:
+                    description: Configures a limitting strategy based on the IO load
+                      of the node
                     properties:
+                      incrementBy:
+                        description: Sets the increment by which the IO load will
+                          be increased by a starting pod until the next measurement
+                          refresh
+                        pattern: ^[0-9]+(\.[0-9]+)?$
+                        type: string
                       maxLoad:
+                        description: Sets the limit of IO load percentage that should
+                          not be exceeded
+                        pattern: ^[0-9]+(\.[0-9]+)?$
                         type: string
                     required:
                     - maxLoad
                     type: object
                   maxConcurrent:
+                    description: Configures a limitting strategy based on the maximum
+                      number of concurrent pod starts
                     properties:
                       perCore:
+                        description: Sets the maximum number of concurrent pod starts
+                          per CPU core
+                        pattern: ^[0-9]+(\.[0-9]+)?$
                         type: string
                       value:
+                        description: Sets the maximum number of concurrent pod starts
+                          in total. Has precedence over perCore
                         minimum: 1
                         type: integer
                     type: object
                   rateLimit:
+                    description: Configures a rate limiting strategy for concurrent
+                      pod starts
                     properties:
                       burst:
+                        description: Sets the maximum number of requests that can
+                          be made in a given time frame
+                        minimum: 1
                         type: integer
                       fillFactor:
+                        description: Sets the fill factor of the rate limiter in time.Duration
+                          format (e.g. "100ms" for 10 requests per second)
+                        pattern: ^[0-9]+(µs|ns|ms|s|m|h)$
                         type: string
                     required:
                     - burst

@@ -52,22 +52,36 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 	throttlers := []throttler.Throttler{}
 	// rate limit first
 	if matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor != "" && matchingConfig.Spec.ThrottleConfig.RateLimit.Burst > 0 {
-		throttlers = append(throttlers, throttler.NewRateLimitThrottler(matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor, matchingConfig.Spec.ThrottleConfig.RateLimit.Burst))
+		throttlers = append(throttlers, throttler.NewRateLimitThrottler(
+			matchingConfig.Spec.ThrottleConfig.RateLimit.FillFactor,
+			matchingConfig.Spec.ThrottleConfig.RateLimit.Burst,
+		))
 	}
 
 	// then max concurrent
 	if matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value > 0 || matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore != "" {
-		throttlers = append(throttlers, throttler.NewPriorityThrottler(matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value, matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore))
+		throttlers = append(throttlers, throttler.NewPriorityThrottler(
+			matchingConfig.Spec.ThrottleConfig.MaxConcurrent.Value,
+			matchingConfig.Spec.ThrottleConfig.MaxConcurrent.PerCore,
+		))
 	}
 
 	// then CPU load
 	if matchingConfig.Spec.ThrottleConfig.Cpu.MaxLoad != "" {
-		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(matchingConfig.Spec.ThrottleConfig.Cpu.MaxLoad, t.currentCloseChannel))
+		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(
+			matchingConfig.Spec.ThrottleConfig.Cpu.MaxLoad,
+			matchingConfig.Spec.ThrottleConfig.Cpu.IncrementBy,
+			t.currentCloseChannel,
+		))
 	}
 
 	// then I/O load
 	if matchingConfig.Spec.ThrottleConfig.IO.MaxLoad != "" {
-		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad(matchingConfig.Spec.ThrottleConfig.IO.MaxLoad, t.currentCloseChannel))
+		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnIOLoad(
+			matchingConfig.Spec.ThrottleConfig.IO.MaxLoad,
+			matchingConfig.Spec.ThrottleConfig.IO.IncrementBy,
+			t.currentCloseChannel,
+		))
 	}
 
 	if len(throttlers) == 0 {

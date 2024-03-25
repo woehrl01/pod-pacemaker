@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad string, close chan struct{}) *ConcurrencyController {
+func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad string, incrementByStr string, close chan struct{}) *ConcurrencyController {
 	currentLoad := 0.0
 	var err error
 	err = nil
@@ -19,7 +19,19 @@ func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad string, close chan struct{}
 		logrus.Fatalf("failed to parse maxCpuLoad: %s", maxIOLoad)
 	}
 
-	c, updated := NewConcurrencyControllerWithDynamicCondition(func(int) (bool, error) { return currentLoad < maxIOLoadf, err }, fmt.Sprintf("current IO Load < %s", maxIOLoad))
+	incrementBy := 0.0
+	if incrementByStr != "" {
+		incrementBy, err = strconv.ParseFloat(incrementByStr, 64)
+		if err != nil {
+			logrus.Fatalf("failed to parse incrementBy: %s", incrementByStr)
+		}
+	}
+
+	c, updated := NewConcurrencyControllerWithDynamicCondition(&DynamicOptions{
+		Condition:    func(i int) (bool, error) { return currentLoad < maxIOLoadf, err },
+		OnAquire:     func() { currentLoad += incrementBy },
+		ConditionStr: fmt.Sprintf("current IO Load < %s", maxIOLoad),
+	})
 
 	go func() {
 		for {

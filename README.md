@@ -73,13 +73,16 @@ The `throttleConfig` section comprises four key types of throttling parameters, 
 3. **CPU Throttling (`cpu`)**:
 
    - `maxLoad`: Specifies the maximum CPU load allowed. This setting aims to prevent overutilization of CPU resources, ensuring that the system remains responsive and stable when starting new pods. e.g. `0.8` means 80% of CPU usage.
+   - `incrementBy`: Defines the amount by which the current CPU usage is increased for each pod. This parameter is useful when the actual CPU usage is not known and you want to increase the current usage by a fixed value until the actual usage is calculated. e.g. `0.1` means 10% of CPU usage.
 
 4. **I/O Throttling (`io`)**:
 
    - `maxLoad`: Defines the maximum I/O load that is permissible. Similar to CPU throttling, this setting helps prevent I/O saturation, ensuring that the system remains responsive and stable during pod initialization. e.g. `0.5` means 50% of I/O usage.
+   - `incrementBy`: Defines the amount by which the current I/O usage is increased for each pod. This parameter is useful when the actual I/O usage is not known and you want to increase the current usage by a fixed value until the actual usage is calculated. e.g. `0.1` means 10% of I/O usage.
 
 > [!NOTE]
 > If using the `cpu` or `io` throttling options, consider it in combination with the other throttling options, as the current resource usage will be only calculated as an average of the last 5 seconds.
+> Alternatively, you can use the `incrementBy` parameter to increase the current resource usage for each pod by a fixed value until the actual usage is calculated.
 
 ### Exclude Pods
 

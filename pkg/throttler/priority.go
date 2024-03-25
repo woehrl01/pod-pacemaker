@@ -55,7 +55,14 @@ type ConcurrencyController struct {
 	cond          *sync.Cond
 	condition     func(int) (bool, error)
 	conditionText string
+	onAquire      func()
 	active        map[string]*Item
+}
+
+type DynamicOptions struct {
+	Condition    func(int) (bool, error)
+	OnAquire     func()
+	ConditionStr string
 }
 
 func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController {
@@ -72,15 +79,22 @@ func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController
 		limit = 1
 	}
 
-	c, _ := NewConcurrencyControllerWithDynamicCondition(func(currentLength int) (bool, error) { return currentLength < limit, nil }, fmt.Sprintf("maxConcurrent = %d, %s", limit, limitType))
+	c, _ := NewConcurrencyControllerWithDynamicCondition(
+		&DynamicOptions{
+			Condition:    func(currentLength int) (bool, error) { return currentLength < limit, nil },
+			OnAquire:     func() {},
+			ConditionStr: fmt.Sprintf("maxConcurrent = %d, %s", limit, limitType),
+		},
+	)
 	return c
 }
 
-func NewConcurrencyControllerWithDynamicCondition(condition func(int) (bool, error), conditionText string) (*ConcurrencyController, func()) {
+func NewConcurrencyControllerWithDynamicCondition(options *DynamicOptions) (*ConcurrencyController, func()) {
 	cc := &ConcurrencyController{
 		pq:            make(PriorityQueue, 0),
-		condition:     condition,
-		conditionText: conditionText,
+		condition:     options.Condition,
+		conditionText: options.ConditionStr,
+		onAquire:      options.OnAquire,
 		active:        make(map[string]*Item),
 	}
 	cc.cond = sync.NewCond(&cc.mu)
@@ -123,6 +137,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 			}
 			if cond {
 				cc.active[slotId] = item
+				cc.onAquire()
 				cc.mu.Unlock()
 				return nil
 			}
