@@ -25,6 +25,7 @@ sequenceDiagram
 
 ## Key Features
 
+- **Reuse of startup/readiness probes:** The concurrency mechanism makes use of the pod's startup and readiness probes to determine when the pod is started successfully.
 - **Seamless Integration:** Functions as a CNI plugin, requiring no modifications to the pod spec or reliance on initContainers.
 - **Controlled Pod Startup:** Manages the concurrency of pod startups, enhancing node stability and performance.
 - **Unobtrusive Design:** Operates without altering the Kubernetes scheduler's behavior, ensuring compatibility and simplicity.
@@ -103,4 +104,4 @@ By configuring these four types of throttling parameters within the `PacemakerCo
 
 ## License
 
-pod-pacemaker is released under the MIT License.
+PodPacemaker is released under the MIT License.
