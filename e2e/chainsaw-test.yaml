@@ -36,6 +36,7 @@ spec:
               - -n
               - default
               - --previous
+              - -c init-cni
     - try:
         - apply:
             resource:
