@@ -49,4 +49,5 @@ kind-load:
 	kind load docker-image $(IMG)
 
 kind-deploy:
-	helm install pod-pacemaker charts/pod-pacemaker --set image.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.tag=$(VERSION) --set debugLogging=true
+	helm install pod-pacemaker charts/pod-pacemaker --set image.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.tag=$(VERSION) --set debugLogging=true --set defaultThrottleConfig.config.maxConcurrent.value=1
+
