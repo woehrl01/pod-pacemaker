@@ -7,10 +7,10 @@ cni:
   mergedName: 00-merged-pod-pacemaker.conflist
 
 daemon:
-  hostPort: 60312
-  metricsPort: 60313
+  socketPath: /var/run/pod-pacemaker/pod-pacemaker.sock
   metricsEnabled: true
   skipDaemonsets: true
+  metricsPort: 9000
 
 podAnnotations: {}
 podLabels: {}

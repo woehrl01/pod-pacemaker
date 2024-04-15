@@ -17,7 +17,7 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(config.MaxWaitTimeInSeconds))
 	defer totalRequestCancel()
 
-	conn, err := WaitUntilConnected(ctx, config.DaemonPort)
+	conn, err := WaitUntilConnected(ctx, config.DaemonSocketPath)
 	if err != nil {
 		if config.SuccessOnConnectionTimeout {
 			logrus.Warnf("Failed to connect to daemon, but successOnConnectionTimeout is set, so returning success")
@@ -41,8 +41,8 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 	return nil
 }
 
-func WaitUntilConnected(ctx context.Context, port int32) (*grpc.ClientConn, error) {
-	server := fmt.Sprintf("localhost:%d", port)
+func WaitUntilConnected(ctx context.Context, socketPath string) (*grpc.ClientConn, error) {
+	server := fmt.Sprintf("unix://%s", socketPath)
 	var conn *grpc.ClientConn
 	err := wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
 		c, err := grpc.DialContext(ctx, server,

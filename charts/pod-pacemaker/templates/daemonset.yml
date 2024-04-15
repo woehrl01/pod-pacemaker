@@ -29,7 +29,6 @@ spec:
         {{ end }}
     spec:
       serviceAccountName: pod-pacemaker
-      hostNetwork: true
       {{- with .Values.priorityClassName }}
       priorityClassName: {{ . }}
       {{ end }}
@@ -42,12 +41,12 @@ spec:
           args:
             - "--cni-bin-dir=/opt/cni/bin"
             - "--cni-config-dir=/etc/cni/net.d"
-            - "--daemon-port={{ .Values.daemon.hostPort }}"
             - "--max-wait-time-in-seconds={{ .Values.cni.maxWaitTimeInSeconds }}"
             - "--primary-config-name={{ .Values.cni.primaryName }}"
             - "--merged-config-name={{ .Values.cni.mergedName }}"
             - "--namespace-exclusions={{ join "," .Values.namespaceExclusions }}"
             - "--success-on-connection-timeout={{ .Values.cni.successOnConnectionTimeout }}"
+            - "--daemon-socket-path={{ .Values.daemon.socketPath }}"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
@@ -61,7 +60,7 @@ spec:
             - "./node-daemon"
           args:
             - "--taint-to-remove={{ .Values.taintToRemove }}"
-            - "--daemon-port={{ .Values.daemon.hostPort }}"
+            - "--daemon-socket-path={{ .Values.daemon.socketPath }}"
             - "--debug-logging={{ .Values.debugLogging }}"
             - "--metrics-port={{ .Values.daemon.metricsPort }}"
             - "--metrics-enabled={{ .Values.daemon.metricsEnabled }}"
@@ -72,12 +71,8 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           ports:
-            - containerPort: {{ .Values.daemon.hostPort }}
+            - containerPort: {{ .Values.daemon.metricsPort }}
               protocol: TCP
-          livenessProbe:
-            grpc:
-              port: {{ .Values.daemon.hostPort }}
-            initialDelaySeconds: 10
           {{- with .Values.resources }}
           resources:
             {{ toYaml . | nindent 12 }}
@@ -105,3 +100,7 @@ spec:
           hostPath:
             path: /etc/cni/net.d
             type: DirectoryOrCreate
+        - name: pod-pacemaker-socket
+          hostPath:
+            path: {{ .Values.daemon.socketPath }}
+            type: Socket

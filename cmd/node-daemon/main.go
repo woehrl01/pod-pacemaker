@@ -29,10 +29,10 @@ import (
 
 var (
 	taintToRemove  = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
-	daemonPort     = flag.Int("daemon-port", 50051, "The port for the node daemon")
 	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
+	daemonSocket   = flag.String("daemon-socket", "/var/run/pod-pacemaker/pod-pacemaker.sock", "The socket for the daemon")
 	skipDaemonSets = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
-	metricsPort    = flag.Int("metrics-port", 60313, "The port for the metrics server")
+	metricsPort    = flag.Int("metrics-port", 9000, "The port for the metrics server")
 	metricsEnabled = flag.Bool("metrics-enabled", true, "Enable the metrics server")
 )
 
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	startGrpcServer(throttler, Options{
-		Port:           *daemonPort,
+		Socket:         *daemonSocket,
 		SkipDaemonSets: *skipDaemonSets,
 	}, podAccessor)
 
