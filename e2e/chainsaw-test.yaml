@@ -64,7 +64,6 @@ spec:
               kind: Deployment
               metadata:
                 name: sleep
-                namespace: default
               spec:
                 replicas: 6
                 selector:
@@ -89,7 +88,6 @@ spec:
             apiVersion: apps/v1
             kind: Deployment
             name: sleep
-            namespace: default
             timeout: 20s
             for:
               condition:
@@ -99,12 +97,10 @@ spec:
             apiVersion: v1
             kind: Pod
             selector: app=sleep
-            namespace: default
         - wait:
             apiVersion: apps/v1
             kind: Deployment
             selector: app=sleep
-            namespace: default
             timeout: 60s
             for:
               condition:
