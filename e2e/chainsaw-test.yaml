@@ -76,7 +76,7 @@ spec:
                       app: sleep
                   spec:
                     initContainers:
-                      - name: sleep
+                      - name: init-sleep
                         image: ubuntu
                         command: ["sleep", "10"]
                     containers:
