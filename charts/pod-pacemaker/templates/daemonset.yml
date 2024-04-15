@@ -79,6 +79,9 @@ spec:
           resources:
             {{ toYaml . | nindent 12 }}
           {{ end }}
+          volumeMounts:
+            - name: pod-pacemaker-socket
+              mountPath: {{ .Values.daemon.socketPath }}
       tolerations:
         - key: {{ .Values.taintToRemove }}
           effect: NoSchedule
