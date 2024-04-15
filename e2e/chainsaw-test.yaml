@@ -20,7 +20,7 @@ spec:
             timeout: 1m
             for:
               condition:
-                name: Ready
+                name: ready
                 value: "true"
       catch:
         - describe:
