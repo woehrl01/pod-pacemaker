@@ -23,7 +23,7 @@ spec:
                 name: Ready
                 value: "true"
       catch:
-        - get:
+        - describe:
             apiVersion: v1
             kind: Pod
             selector: name=pod-pacemaker
@@ -70,7 +70,7 @@ spec:
                 name: Available
                 value: "true"
       catch:
-        - get:
+        - describe:
             apiVersion: v1
             kind: Pod
             selector: app=sleep
