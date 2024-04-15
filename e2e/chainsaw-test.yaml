@@ -85,14 +85,6 @@ spec:
     - try: # we check if the deployment is available, this should fail because the init container is still running because of the pacemaker
         - sleep:
             duration: 20s
-        - assert:
-            resource:
-              apiVersion: apps/v1
-              kind: Deployment
-              metadata:
-                name: sleep
-              status:
-                (readyReplicas > 5): false
         - script: # Check if readyReplicas is less than 6 or not set (deployment not ready)
             content: |
               readyReplicas=$(kubectl get deployment sleep -o jsonpath='{.status.readyReplicas}')
