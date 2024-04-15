@@ -11,3 +11,4 @@ spec:
               kind: DaemonSet
               metadata:
                 name: pod-pacemaker
+                namespace: default
