@@ -52,6 +52,8 @@ spec:
               mountPath: /opt/cni/bin
             - name: cni-config-dir
               mountPath: /etc/cni/net.d
+            - name: pod-pacemaker-socket
+              mountPath: {{ .Values.daemon.socketPath }}
       containers:
         - name: node-daemon
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
