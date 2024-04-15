@@ -32,6 +32,7 @@ spec:
             entrypoint: kubectl
             args:
               - logs
+              - --prefix
               - -l=name=pod-pacemaker
               - -n
               - default
