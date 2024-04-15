@@ -95,9 +95,10 @@ spec:
               status:
                 (readyReplicas < 6): true
         - describe:
-            apiVersion: v1
-            kind: Pod
-            selector: app=sleep
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: sleep
         - wait:
             apiVersion: apps/v1
             kind: Deployment
