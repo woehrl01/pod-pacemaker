@@ -82,7 +82,6 @@ spec:
                       - name: sleep
                         image: ubuntu
                         command: ["sleep", "3600"]
-
     - try: # we check if the deployment is available, this should fail because the init container is still running because of the pacemaker
         - sleep:
             duration: 20s
