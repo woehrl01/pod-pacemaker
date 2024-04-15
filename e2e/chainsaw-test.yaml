@@ -41,6 +41,21 @@ spec:
               - init-cni
               - --tail
               - "100"
+            check:
+              "(@ != null)": true
+
+        - command:
+            entrypoint: kubectl
+            args:
+              - logs
+              - --prefix
+              - -l=name=pod-pacemaker
+              - -n
+              - default
+              - -c
+              - node-daemon
+              - --tail
+              - "100"
     - try:
         - apply:
             resource:
