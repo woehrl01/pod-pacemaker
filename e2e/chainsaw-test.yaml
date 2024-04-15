@@ -32,10 +32,11 @@ spec:
             entrypoint: kubectl
             args:
               - logs
-              - pod-pacemaker
+              - -l=name=pod-pacemaker
               - -n
               - default
               - --previous
+              - --all-containers
     - try:
         - apply:
             resource:
