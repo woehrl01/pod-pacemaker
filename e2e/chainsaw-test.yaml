@@ -23,30 +23,30 @@ spec:
                 name: Ready
                 value: "true"
         - apply:
-          resource:
-            apiVersion: apps/v1
-            kind: Deployment
-            metadata:
-              name: sleep
-              namespace: default
-            spec:
-              replicas: 6
-              selector:
-                matchLabels:
-                  app: sleep
-              template:
-                metadata:
-                  labels:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: sleep
+                namespace: default
+              spec:
+                replicas: 6
+                selector:
+                  matchLabels:
                     app: sleep
-                spec:
-                  initContainers:
-                    - name: sleep
-                      image: ubuntu
-                      command: ["sleep", "10"]
-                  containers:
-                    - name: sleep
-                      image: ubuntu
-                      command: ["sleep", "3600"]
+                template:
+                  metadata:
+                    labels:
+                      app: sleep
+                  spec:
+                    initContainers:
+                      - name: sleep
+                        image: ubuntu
+                        command: ["sleep", "10"]
+                    containers:
+                      - name: sleep
+                        image: ubuntu
+                        command: ["sleep", "3600"]
     - try:
         - wait:
             apiVersion: apps/v1
