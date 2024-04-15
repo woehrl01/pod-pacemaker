@@ -100,7 +100,7 @@ spec:
         - wait:
             apiVersion: apps/v1
             kind: Deployment
-            selector: app=sleep
+            name: sleep
             timeout: 60s
             for:
               condition:
