@@ -97,8 +97,7 @@ spec:
         - describe:
             apiVersion: apps/v1
             kind: Deployment
-            metadata:
-              name: sleep
+            name: sleep
         - wait:
             apiVersion: apps/v1
             kind: Deployment
