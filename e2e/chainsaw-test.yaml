@@ -28,9 +28,14 @@ spec:
             kind: Pod
             selector: name=pod-pacemaker
             namespace: default
-        - podLogs:
-            selector: name=pod-pacemaker
-            namespace: default
+        - command:
+            entrypoint: kubectl
+            args:
+              - logs
+              - pod-pacemaker
+              - -n
+              - default
+              - --previous
     - try:
         - apply:
             resource:
