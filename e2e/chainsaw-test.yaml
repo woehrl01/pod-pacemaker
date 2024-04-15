@@ -14,8 +14,8 @@ spec:
                 namespace: default
         - wait:
             apiVersion: apps/v1
-            kind: DaemonSet
-            name: pod-pacemaker
+            kind: Pod
+            selector: name=pod-pacemaker
             namespace: default
             timeout: 30s
             for:
