@@ -15,7 +15,7 @@ spec:
         - wait:
             apiVersion: v1
             kind: Pod
-            name: pod-pacemaker
+            selector: app=my-app
             namespace: default
             timeout: 30s
             for:
@@ -26,10 +26,10 @@ spec:
         - get:
             apiVersion: v1
             kind: Pod
-            name: pod-pacemaker
+            selector: name=pod-pacemaker
             namespace: default
         - podLogs:
-            name: pod-pacemaker
+            selector: name=pod-pacemaker
             namespace: default
     - try:
         - apply:
@@ -73,12 +73,12 @@ spec:
         - get:
             apiVersion: v1
             kind: Pod
-            name: sleep
+            selector: app=sleep
             namespace: default
         - wait:
             apiVersion: apps/v1
             kind: Deployment
-            name: sleep
+            selector: app=sleep
             namespace: default
             timeout: 60s
             for:
