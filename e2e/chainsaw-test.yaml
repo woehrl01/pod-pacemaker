@@ -1,0 +1,13 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: deployed
+spec:
+  steps:
+    - try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: DaemonSet
+              metadata:
+                name: pod-pacemaker
