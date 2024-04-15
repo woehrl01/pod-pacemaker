@@ -50,7 +50,7 @@ jobs:
         uses: kyverno/action-install-chainsaw@v0.1.9
 
       - name: Check install
-        run: chainsaw test  e2e --skip-delete true
+        run: chainsaw test --skip-delete=true e2e
 
       - name: Login to GitHub Container Registry
         if: github.event_name == 'push' || github.event_name == 'release'
