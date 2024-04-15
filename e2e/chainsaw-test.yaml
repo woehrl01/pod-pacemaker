@@ -17,11 +17,11 @@ spec:
             kind: Pod
             selector: name=pod-pacemaker
             namespace: default
-            timeout: 30s
+            timeout: 1m
             for:
               condition:
                 name: Ready
-                value: "True"
+                value: "true"
       catch:
         - describe:
             apiVersion: v1
@@ -95,7 +95,7 @@ spec:
             for:
               condition:
                 name: Available
-                value: "True"
+                value: "true"
       catch:
         - describe:
             apiVersion: v1
@@ -111,4 +111,4 @@ spec:
             for:
               condition:
                 name: Available
-                value: "True"
+                value: "true"
