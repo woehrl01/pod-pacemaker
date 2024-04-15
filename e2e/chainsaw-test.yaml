@@ -58,7 +58,7 @@ spec:
               condition:
                 name: Available
                 value: "true"
-    - catch:
+      catch:
         - wait:
             apiVersion: apps/v1
             kind: Deployment
