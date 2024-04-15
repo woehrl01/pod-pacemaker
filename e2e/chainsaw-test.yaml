@@ -42,7 +42,7 @@ spec:
               - --tail
               - "100"
             check:
-              (@ != null): true
+              (@ == null): true
 
         - command:
             entrypoint: kubectl
