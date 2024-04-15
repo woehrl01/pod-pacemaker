@@ -47,7 +47,7 @@ jobs:
           VERSION=${{ steps.version.outputs.version }} make kind-deploy
 
       - name: Install Chainsaw
-        uses: kyverno/action-install-chainsaw@v0.1.0
+        uses: kyverno/action-install-chainsaw@v0.1.9
 
       - name: Check install
         working-directory: e2e
