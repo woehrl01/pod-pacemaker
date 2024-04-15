@@ -15,7 +15,7 @@ spec:
         - wait:
             apiVersion: v1
             kind: Pod
-            selector: app=my-app
+            selector: name=pod-pacemaker
             namespace: default
             timeout: 30s
             for:
