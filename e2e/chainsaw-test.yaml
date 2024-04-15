@@ -84,21 +84,16 @@ spec:
                         command: ["sleep", "3600"]
 
     - try: # we check if the deployment is available, this should fail because the init container is still running because of the pacemaker
-        - wait:
-            apiVersion: apps/v1
-            kind: Deployment
-            name: sleep
-            timeout: 20s
-            for:
-              condition:
-                name: Available
-        - command:
-            entrypoint: echo
-            args:
-              - This case should fail because the init container is still running, if you read this message something went wrong
-            check:
-              ($error != null): true
-      catch: # we catch the failure and then expect that the pods are available after 60 seconds
+        - sleep:
+            duration: 20s
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: sleep
+              status:
+                (readyReplicas < 6): true
         - describe:
             apiVersion: v1
             kind: Pod
