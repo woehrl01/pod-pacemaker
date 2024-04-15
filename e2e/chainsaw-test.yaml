@@ -21,7 +21,6 @@ spec:
             for:
               condition:
                 name: ready
-                value: "true"
       catch:
         - describe:
             apiVersion: v1
@@ -95,7 +94,6 @@ spec:
             for:
               condition:
                 name: Available
-                value: "true"
       catch:
         - describe:
             apiVersion: v1
@@ -111,4 +109,3 @@ spec:
             for:
               condition:
                 name: Available
-                value: "true"
