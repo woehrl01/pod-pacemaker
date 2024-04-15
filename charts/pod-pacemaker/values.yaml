@@ -7,10 +7,11 @@ cni:
   mergedName: 00-merged-pod-pacemaker.conflist
 
 daemon:
-  hostPort: 60312
-  metricsPort: 60313
+  socketFile: /var/run/pod-pacemaker/pod-pacemaker.sock
+  socketPath: /var/run/pod-pacemaker
   metricsEnabled: true
   skipDaemonsets: true
+  metricsPort: 9000
 
 podAnnotations: {}
 podLabels: {}
@@ -26,7 +27,9 @@ resources: {}
 
 tolerations: 
   - effect: "NoSchedule"
+    operator: "Exists"
   - effect: "NoExecute"
+    operator: "Exists"
 
 affinity: {}
 

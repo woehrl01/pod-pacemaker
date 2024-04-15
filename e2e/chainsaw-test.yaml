@@ -1,0 +1,109 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: deployed
+spec:
+  steps:
+    - try: # first we check if the pod-pacemaker daemonset is deployed correctly
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: pod-pacemaker
+                namespace: default
+        - wait:
+            apiVersion: v1
+            kind: Pod
+            selector: name=pod-pacemaker
+            namespace: default
+            timeout: 1m
+            for:
+              condition:
+                name: ready
+      catch: # if the daemonset is not deployed correctly, we describe the pod-pacemaker pod and check the logs
+        - describe:
+            apiVersion: v1
+            kind: Pod
+            selector: name=pod-pacemaker
+            namespace: default
+        - command:
+            entrypoint: kubectl
+            args:
+              - logs
+              - --prefix
+              - -l=name=pod-pacemaker
+              - -n
+              - default
+              - --previous
+              - -c
+              - init-cni
+              - --tail
+              - "100"
+            check:
+              (@ == null): true
+
+        - command:
+            entrypoint: kubectl
+            args:
+              - logs
+              - --prefix
+              - -l=name=pod-pacemaker
+              - -n
+              - default
+              - -c
+              - node-daemon
+              - --tail
+              - "100"
+            check:
+              (@ == null): true
+    - try: # next we deploy a deployment with 6 replicas which has a init container that sleeps for 10 seconds
+        - apply:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: sleep
+              spec:
+                replicas: 6
+                selector:
+                  matchLabels:
+                    app: sleep
+                template:
+                  metadata:
+                    labels:
+                      app: sleep
+                  spec:
+                    initContainers:
+                      - name: init-sleep
+                        image: ubuntu
+                        command: ["sleep", "10"]
+                    containers:
+                      - name: sleep
+                        image: ubuntu
+                        command: ["sleep", "3600"]
+    - try: # we check if the deployment is available, this should fail because the init container is still running because of the pacemaker
+        - sleep:
+            duration: 20s
+        - script: # Check if readyReplicas is less than 6 or not set (deployment not ready)
+            content: |
+              set -e
+              readyReplicas=$(kubectl get deployment sleep -n $NAMESPACE -o jsonpath='{.status.readyReplicas}')
+              if [ -z "$readyReplicas" ] || [ "$readyReplicas" -lt 6 ]; then
+                echo "Success: There are less than 6 ready replicas. Current count: ${readyReplicas:-0}"
+              else
+                echo "Failure: There are 5 or more ready replicas."
+                exit 1  # Exit with failure
+              fi
+        - wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: sleep
+            timeout: 180s
+            for:
+              condition:
+                name: Available
+        - command:
+            entrypoint: echo
+            args:
+              - The deployment is available, the init container is done

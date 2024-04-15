@@ -21,7 +21,7 @@ type PluginConf struct {
 		PodAnnotations map[string]string `json:"io.kubernetes.cri.pod-annotations"`
 	} `json:"runtimeConfig"`
 
-	DaemonPort                 int32    `json:"daemonPort"`
+	DaemonSocketPath           string   `json:"daemonSocketPath"`
 	MaxWaitTimeInSeconds       int32    `json:"maxWaitTimeInSeconds"`
 	NamespaceExclusions        []string `json:"namespaceExclusions"`
 	SuccessOnConnectionTimeout bool     `json:"successOnConnectionTimeout"`
@@ -49,8 +49,8 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 		return nil, fmt.Errorf("could not parse prevResult: %v", err)
 	}
 
-	if conf.DaemonPort == 0 {
-		return nil, fmt.Errorf("daemonPort must be set")
+	if len(conf.DaemonSocketPath) == 0 {
+		return nil, fmt.Errorf("daemonSocketPath must be set")
 	}
 
 	return &conf, nil

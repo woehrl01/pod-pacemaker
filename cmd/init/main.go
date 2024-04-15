@@ -17,7 +17,7 @@ import (
 var (
 	cniName                    = flag.String("cni-name", "pod-pacemaker", "The name of the CNI plugin")
 	cniType                    = flag.String("cni-type", "pod-pacemaker", "The type of the CNI plugin")
-	daemonPort                 = flag.Int("daemon-port", 50051, "The port for the node daemon")
+	daemonSocket               = flag.String("daemon-socket", "/var/run/pod-pacemaker/pod-pacemaker.sock", "The socket for the daemon")
 	maxWaitTimeInSeconds       = flag.Int32("max-wait-time-in-seconds", 120, "The maximum wait time in seconds")
 	cniBinDir                  = flag.String("cni-bin-dir", "/opt/cni/bin", "The directory for CNI binaries")
 	cniConfigDir               = flag.String("cni-config-dir", "/etc/cni/net.d", "The directory for CNI configurations")
@@ -119,7 +119,7 @@ func generateCNIConfig(filePath string) error {
 				Capabilities: CniConfigCapabilities{
 					PodAnnotations: true,
 				},
-				DaemonPort:                 *daemonPort,
+				DaemonSocketPath:           *daemonSocket,
 				MaxWaitTimeInSeconds:       *maxWaitTimeInSeconds,
 				NamespaceExclusions:        *namespaceExclusions,
 				SuccessOnConnectionTimeout: *successOnConnectionTimeout,
@@ -146,7 +146,7 @@ type CniPlugin struct {
 	Name                       string                `json:"name"`
 	Type                       string                `json:"type"`
 	Capabilities               CniConfigCapabilities `json:"capabilities"`
-	DaemonPort                 int                   `json:"daemonPort"`
+	DaemonSocketPath           string                `json:"daemonSocketPath"`
 	MaxWaitTimeInSeconds       int32                 `json:"maxWaitTimeInSeconds"`
 	NamespaceExclusions        []string              `json:"namespaceExclusions"`
 	SuccessOnConnectionTimeout bool                  `json:"successOnConnectionTimeout"`

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
 
@@ -16,9 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	pb "woehrl01/pod-pacemaker/proto"
-
-	"google.golang.org/grpc/health"
-	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 
 	"google.golang.org/grpc"
 )
@@ -47,7 +43,7 @@ type podLimitService struct {
 }
 
 type Options struct {
-	Port           int
+	Socket         string
 	SkipDaemonSets bool
 }
 
@@ -118,13 +114,11 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 }
 
 func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podaccessor.PodAccessor) {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", o.Port))
+	lis, err := net.Listen("unix", o.Socket)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	healthcheck := health.NewServer()
-	healthgrpc.RegisterHealthServer(s, healthcheck)
 
 	service := NewPodLimitersServer(throttler, podAccessor, o)
 

@@ -44,3 +44,10 @@ manifests:
 helm-push:
 	helm package charts/pod-pacemaker --app-version $(VERSION) --version $(VERSION)
 	helm push pod-pacemaker-*.tgz oci://ghcr.io/woehrl01/pod-pacemaker
+
+kind-load:
+	kind load docker-image $(IMG)
+
+kind-deploy:
+	helm install pod-pacemaker charts/pod-pacemaker --set image.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.tag=$(VERSION) --set debugLogging=true --set defaultThrottleConfig.config.maxConcurrent.value=1
+
