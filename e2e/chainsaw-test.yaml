@@ -39,6 +39,8 @@ spec:
               - --previous
               - -c
               - init-cni
+              - --tail
+              - 100
     - try:
         - apply:
             resource:

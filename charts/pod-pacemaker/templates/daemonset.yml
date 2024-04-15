@@ -46,7 +46,7 @@ spec:
             - "--merged-config-name={{ .Values.cni.mergedName }}"
             - "--namespace-exclusions={{ join "," .Values.namespaceExclusions }}"
             - "--success-on-connection-timeout={{ .Values.cni.successOnConnectionTimeout }}"
-            - "--daemon-socket-path={{ .Values.daemon.socketFile }}"
+            - "--daemon-socket={{ .Values.daemon.socketFile }}"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
@@ -62,7 +62,7 @@ spec:
             - "./node-daemon"
           args:
             - "--taint-to-remove={{ .Values.taintToRemove }}"
-            - "--daemon-socket-path={{ .Values.daemon.socketFile }}"
+            - "--daemon-socket={{ .Values.daemon.socketFile }}"
             - "--debug-logging={{ .Values.debugLogging }}"
             - "--metrics-port={{ .Values.daemon.metricsPort }}"
             - "--metrics-enabled={{ .Values.daemon.metricsEnabled }}"
