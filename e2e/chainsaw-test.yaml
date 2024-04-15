@@ -15,13 +15,23 @@ spec:
         - wait:
             apiVersion: v1
             kind: Pod
-            selector: name=pod-pacemaker
+            name: pod-pacemaker
             namespace: default
             timeout: 30s
             for:
               condition:
                 name: Ready
                 value: "true"
+      catch:
+        - get:
+            apiVersion: v1
+            kind: Pod
+            name: pod-pacemaker
+            namespace: default
+        - podLogs:
+            name: pod-pacemaker
+            namespace: default
+    - try:
         - apply:
             resource:
               apiVersion: apps/v1
@@ -47,6 +57,7 @@ spec:
                       - name: sleep
                         image: ubuntu
                         command: ["sleep", "3600"]
+
     - try:
         - wait:
             apiVersion: apps/v1
@@ -59,6 +70,11 @@ spec:
                 name: Available
                 value: "true"
       catch:
+        - get:
+            apiVersion: v1
+            kind: Pod
+            name: sleep
+            namespace: default
         - wait:
             apiVersion: apps/v1
             kind: Deployment
