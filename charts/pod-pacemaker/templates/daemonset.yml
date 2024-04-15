@@ -105,4 +105,4 @@ spec:
         - name: pod-pacemaker-socket
           hostPath:
             path: {{ .Values.daemon.socketPath }}
-            type: Socket
+            type: FileOrCreate
