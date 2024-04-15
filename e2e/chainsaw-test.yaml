@@ -87,7 +87,7 @@ spec:
             duration: 20s
         - script: # Check if readyReplicas is less than 6 or not set (deployment not ready)
             content: |
-              readyReplicas=$(kubectl get deployment sleep -o jsonpath='{.status.readyReplicas}')
+              readyReplicas=$(kubectl get deployment sleep -n $NAMESPACE -o jsonpath='{.status.readyReplicas}')
               if [ -z "$readyReplicas" ] || [ "$readyReplicas" -lt 6 ]; then
                 echo "Success: There are less than 6 ready replicas. Current count: ${readyReplicas:-0}"
               else
