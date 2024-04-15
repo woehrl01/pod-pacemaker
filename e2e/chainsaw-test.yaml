@@ -92,7 +92,7 @@ spec:
               metadata:
                 name: sleep
               status:
-                (readyReplicas < 6): true
+                (readyReplicas > 5): false
         - wait:
             apiVersion: apps/v1
             kind: Deployment
