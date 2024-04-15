@@ -93,6 +93,15 @@ spec:
                 name: sleep
               status:
                 (readyReplicas > 5): false
+        - script: # Check if readyReplicas is less than 6 or not set (deployment not ready)
+            content: |
+              readyReplicas=$(kubectl get deployment sleep -o jsonpath='{.status.readyReplicas}')
+              if [ -z "$readyReplicas" ] || [ "$readyReplicas" -lt 6 ]; then
+                echo "Success: There are less than 6 ready replicas. Current count: ${readyReplicas:-0}"
+              else
+                echo "Failure: There are 5 or more ready replicas."
+                exit 1  # Exit with failure
+              fi
         - wait:
             apiVersion: apps/v1
             kind: Deployment
