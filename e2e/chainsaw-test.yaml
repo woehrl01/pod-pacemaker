@@ -107,7 +107,7 @@ spec:
             apiVersion: apps/v1
             kind: Deployment
             name: sleep
-            timeout: 60s
+            timeout: 180s
             for:
               condition:
                 name: Available
