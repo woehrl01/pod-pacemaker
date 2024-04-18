@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"woehrl01/pod-pacemaker/pkg/podaccessor"
@@ -114,10 +117,27 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 }
 
 func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podaccessor.PodAccessor) {
+	_ = syscall.Unlink(o.Socket) // clean up old socket and ignore errors
+	
 	lis, err := net.Listen("unix", o.Socket)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+
+	// Unix sockets must be unlink()ed before being reused again.
+	// Handle common process-killing signals so we can gracefully shut down:
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, os.Interrupt, os.Kill, syscall.SIGTERM)
+	go func(c chan os.Signal) {
+		// Wait for a SIGINT or SIGKILL:
+		sig := <-c
+		log.Printf("Caught signal %s: shutting down.", sig)
+		// Stop listening (and unlink the socket if unix type):
+		lis.Close()
+		// And we're done:
+		os.Exit(0)
+	}(sigc)
+
 	s := grpc.NewServer()
 
 	service := NewPodLimitersServer(throttler, podAccessor, o)
