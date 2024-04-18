@@ -60,6 +60,7 @@ func NewPodLimitersServer(throttler throttler.Throttler, podAccessor podaccessor
 		throttler:   throttler,
 		podAccessor: podAccessor,
 		options:     o,
+		inflight:    NewNamedLocks(),
 	}
 }
 
