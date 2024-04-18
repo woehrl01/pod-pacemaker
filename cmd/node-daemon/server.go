@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -43,6 +45,7 @@ type podLimitService struct {
 	throttler   throttler.Throttler
 	podAccessor podaccessor.PodAccessor
 	options     Options
+	inflight    *NamedLocks
 }
 
 type Options struct {
@@ -62,11 +65,19 @@ func NewPodLimitersServer(throttler throttler.Throttler, podAccessor podaccessor
 
 func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.WaitResponse, error) {
 	log.Debugf("Received: %v", in.GetSlotName())
+
+	slotId := in.GetSlotName()
+
+	if acquired := s.inflight.TryAcquire(slotId); !acquired {
+		return nil, fmt.Errorf("slot %s already awaited for", slotId)
+	}
+	defer s.inflight.Release(slotId)
+
 	startTime := time.Now()
 
 	var pod *corev1.Pod
 	wait.PollUntilContextCancel(ctx, 500*time.Millisecond, true, func(ctx context.Context) (bool, error) {
-		p, err := s.podAccessor.GetPodByKey(in.GetSlotName())
+		p, err := s.podAccessor.GetPodByKey(slotId)
 		if err != nil {
 			podNotFoundCounter.Inc()
 			return false, nil
@@ -79,7 +90,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 		return true, nil
 	})
 	if pod == nil {
-		log.Warnf("Failed to get pod: %v", in.GetSlotName())
+		log.Warnf("Failed to get pod: %v", slotId)
 		waitFailedCounter.WithLabelValues("pod_not_found").Inc()
 		return &pb.WaitResponse{Success: false, Message: "Failed to get pod"}, nil
 	}
@@ -93,7 +104,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 		return &pb.WaitResponse{Success: true, Message: "Skipped daemonset"}, nil
 	}
 
-	if err := s.throttler.AquireSlot(ctx, in.GetSlotName(), data); err != nil {
+	if err := s.throttler.AquireSlot(ctx, slotId, data); err != nil {
 		log.Debugf("Failed to acquire lock: %v", err)
 		waitFailedCounter.WithLabelValues("failed_to_acquire_lock").Inc()
 		return &pb.WaitResponse{Success: false, Message: "Failed to acquire lock in time"}, nil
@@ -108,7 +119,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 	duration := time.Since(startTime)
 	log.WithFields(log.Fields{
 		"duration": duration,
-		"slot":     in.GetSlotName(),
+		"slot":     slotId,
 	}).Debug("Acquired slot")
 
 	waitTimeHistogram.Observe(duration.Seconds())
@@ -118,7 +129,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 
 func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podaccessor.PodAccessor) {
 	_ = syscall.Unlink(o.Socket) // clean up old socket and ignore errors
-	
+
 	lis, err := net.Listen("unix", o.Socket)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -148,4 +159,32 @@ func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podac
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+type NamedLocks struct {
+	locks map[string]bool
+	mux   *sync.Mutex
+}
+
+func NewNamedLocks() *NamedLocks {
+	return &NamedLocks{
+		locks: make(map[string]bool),
+		mux:   &sync.Mutex{},
+	}
+}
+
+func (vl *NamedLocks) TryAcquire(name string) bool {
+	vl.mux.Lock()
+	defer vl.mux.Unlock()
+	if _, exists := vl.locks[name]; exists {
+		return false
+	}
+	vl.locks[name] = true
+	return true
+}
+
+func (vl *NamedLocks) Release(name string) {
+	vl.mux.Lock()
+	defer vl.mux.Unlock()
+	delete(vl.locks, name)
 }

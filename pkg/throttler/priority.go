@@ -111,6 +111,7 @@ func (cc *ConcurrencyController) String() string {
 
 func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, data Data) error {
 	cc.mu.Lock()
+
 	item := &Item{
 		value:    slotId,
 		priority: data.Priority,
