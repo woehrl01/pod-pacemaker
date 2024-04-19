@@ -49,8 +49,8 @@ type podLimitService struct {
 }
 
 type Options struct {
-	Socket         string
-	SkipDaemonSets bool
+	Socket                string
+	SkipDaemonSets        bool
 	TrackInflightRequests bool
 }
 
