@@ -49,8 +49,9 @@ type podLimitService struct {
 }
 
 type Options struct {
-	Socket         string
-	SkipDaemonSets bool
+	Socket                string
+	SkipDaemonSets        bool
+	TrackInflightRequests bool
 }
 
 var _ pb.PodLimiterServer = &podLimitService{}
@@ -69,8 +70,10 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 
 	slotId := in.GetSlotName()
 
-	if acquired := s.inflight.TryAcquire(slotId); !acquired {
-		return nil, fmt.Errorf("slot %s already awaited for", slotId)
+	if s.options.TrackInflightRequests {
+		if acquired := s.inflight.TryAcquire(slotId); !acquired {
+			return nil, fmt.Errorf("slot %s already awaited for", slotId)
+		}
 	}
 	defer s.inflight.Release(slotId)
 

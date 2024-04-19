@@ -28,12 +28,13 @@ import (
 )
 
 var (
-	taintToRemove  = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
-	debugLogging   = flag.Bool("debug-logging", false, "Enable debug logging")
-	daemonSocket   = flag.String("daemon-socket", "/var/run/pod-pacemaker/pod-pacemaker.sock", "The socket for the daemon")
-	skipDaemonSets = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
-	metricsPort    = flag.Int("metrics-port", 9000, "The port for the metrics server")
-	metricsEnabled = flag.Bool("metrics-enabled", true, "Enable the metrics server")
+	taintToRemove         = flag.String("taint-to-remove", "pod-pacemaker", "The taint to remove from the node")
+	debugLogging          = flag.Bool("debug-logging", false, "Enable debug logging")
+	daemonSocket          = flag.String("daemon-socket", "/var/run/pod-pacemaker/pod-pacemaker.sock", "The socket for the daemon")
+	skipDaemonSets        = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
+	metricsPort           = flag.Int("metrics-port", 9000, "The port for the metrics server")
+	metricsEnabled        = flag.Bool("metrics-enabled", true, "Enable the metrics server")
+	trackInflightRequests = flag.Bool("track-inflight-requests", false, "Track inflight requests")
 )
 
 func main() {
@@ -73,8 +74,9 @@ func main() {
 	}
 
 	startGrpcServer(throttler, Options{
-		Socket:         *daemonSocket,
-		SkipDaemonSets: *skipDaemonSets,
+		Socket:                *daemonSocket,
+		SkipDaemonSets:        *skipDaemonSets,
+		TrackInflightRequests: *trackInflightRequests,
 	}, podAccessor)
 
 	<-stopper
