@@ -147,6 +147,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		select {
 		case <-ctx.Done():
 			// The operation was cancelled, clean-up is handled at the beginning of the loop.
+			cc.cond.Broadcast()
 		default:
 			cc.cond.L.Lock()
 			cc.cond.Wait()
