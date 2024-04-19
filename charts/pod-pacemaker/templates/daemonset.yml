@@ -67,6 +67,7 @@ spec:
             - "--metrics-port={{ .Values.daemon.metricsPort }}"
             - "--metrics-enabled={{ .Values.daemon.metricsEnabled }}"
             - "--skip-daemonsets={{ .Values.daemon.skipDaemonsets }}"
+            - "--track-inflight-requests={{ .Values.daemon.trackInflightRequests }}"
           env:
             - name: NODE_NAME
               valueFrom:

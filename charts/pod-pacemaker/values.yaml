@@ -12,6 +12,7 @@ daemon:
   metricsEnabled: true
   skipDaemonsets: true
   metricsPort: 9000
+  trackInflightRequests: false
 
 podAnnotations: {}
 podLabels: {}

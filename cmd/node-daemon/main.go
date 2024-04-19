@@ -34,6 +34,7 @@ var (
 	skipDaemonSets = flag.Bool("skip-daemonsets", true, "Skip throttling of daemonsets")
 	metricsPort    = flag.Int("metrics-port", 9000, "The port for the metrics server")
 	metricsEnabled = flag.Bool("metrics-enabled", true, "Enable the metrics server")
+	trackInflightRequests = flag.Bool("track-inflight-requests", false, "Track inflight requests")
 )
 
 func main() {
@@ -75,6 +76,7 @@ func main() {
 	startGrpcServer(throttler, Options{
 		Socket:         *daemonSocket,
 		SkipDaemonSets: *skipDaemonSets,
+		TrackInflightRequests: *trackInflightRequests,
 	}, podAccessor)
 
 	<-stopper
