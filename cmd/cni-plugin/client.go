@@ -45,12 +45,13 @@ func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error
 }
 
 func isConnectionError(err error) bool {
-	return strings.Contains(err.Error(), "connection refused") ||
-		strings.Contains(err.Error(), " error reading from server") ||
-		strings.Contains(err.Error(), "connection reset by peer") ||
-		strings.Contains(err.Error(), "transport is closing") ||
-		strings.Contains(err.Error(), "connection closed") ||
-		strings.Contains(err.Error(), "Error while dialing")
+	errorMsg := err.Error()
+	return strings.Contains(errorMsg, "connection refused") ||
+		strings.Contains(errorMsg, "error reading from server") ||
+		strings.Contains(errorMsg, "connection reset by peer") ||
+		strings.Contains(errorMsg, "transport is closing") ||
+		strings.Contains(errorMsg, "connection closed") ||
+		strings.Contains(errorMsg, "Error while dialing")
 }
 
 func WaitUntilConnected(ctx context.Context, socketPath string) (*grpc.ClientConn, error) {
