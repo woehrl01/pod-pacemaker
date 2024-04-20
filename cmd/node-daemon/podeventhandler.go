@@ -56,7 +56,7 @@ func (p *PodEventHandler) RemoveOutdatedSlots(currentPods []*v1.Pod) {
 		if _, ok := currentPodNames[slot]; ok {
 			continue
 		}
-		log.WithField("slot", slot).Info("Removing outdated slot")
+		log.WithField("slot", slot).Warn("Removing outdated slot")
 		p.throttler.ReleaseSlot(p.ctx, slot)
 	}
 }
