@@ -57,6 +57,7 @@ type ConcurrencyController struct {
 	conditionText   string
 	onAquire        func()
 	active          map[string]*Item
+	currentItems    map[string]*Item
 }
 
 type DynamicOptions struct {
@@ -119,12 +120,18 @@ func (cc *ConcurrencyController) broadcastPossibleConditionChange() {
 
 func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, data Data) error {
 	cc.mu.Lock()
-
-	item := &Item{
-		value:    slotId,
-		priority: data.Priority,
+	var item *Item
+	// If we already have an item for this slot, use it.
+	if existing, ok := cc.currentItems[slotId]; ok {
+		item = existing
+	} else {
+		item := &Item{
+			value:    slotId,
+			priority: data.Priority,
+		}
+		cc.currentItems[slotId] = item
+		heap.Push(&cc.pq, item)
 	}
-	heap.Push(&cc.pq, item)
 	cc.mu.Unlock()
 
 	for {
@@ -133,6 +140,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		if ctx.Err() != nil { // Context was cancelled.
 			if !ok || active == item { // Remove the item if it wasn't activated.
 				heap.Remove(&cc.pq, item.index)
+				delete(cc.currentItems, slotId)
 				cc.broadcastPossibleConditionChange()
 			}
 			cc.mu.Unlock()
