@@ -49,7 +49,7 @@ jobs:
       - name: Install Chainsaw
         uses: kyverno/action-install-chainsaw@v0.1.9
 
-      - name: Check install
+      - name: Run Chainsaw Test
         run: chainsaw test --skip-delete=true e2e
 
       - name: Login to GitHub Container Registry

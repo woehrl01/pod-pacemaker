@@ -18,7 +18,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -117,27 +116,28 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	}))
 
 	podInformer := factory.Core().V1().Pods()
-
 	podEventHandler := NewPodEventHandler(throttler, ctx)
+
+	removeOutdated := func() {
+		currentPods := make([]*v1.Pod, 0)
+			for _, pod := range podInformer.Informer().GetIndexer().List() {
+				currentPods = append(currentPods, pod.(*v1.Pod))
+			}
+			podEventHandler.RemoveOutdatedSlots(currentPods)
+	}
 
 	informer := podInformer.Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			podEventHandler.OnAdd(obj.(*v1.Pod))
-			currentPods, err := podInformer.Lister().Pods(v1.NamespaceAll).List(labels.Everything())
-			if err == nil {
-				podEventHandler.RemoveOutdatedSlots(currentPods)
-			}
+			removeOutdated()
 		},
 		DeleteFunc: func(obj interface{}) {
 			podEventHandler.OnDelete(obj.(*v1.Pod))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			podEventHandler.OnAdd(newObj.(*v1.Pod))
-			currentPods, err := podInformer.Lister().Pods(v1.NamespaceAll).List(labels.Everything())
-			if err == nil {
-				podEventHandler.RemoveOutdatedSlots(currentPods)
-			}
+			removeOutdated()
 		},
 	})
 
