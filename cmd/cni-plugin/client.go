@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -29,6 +30,10 @@ func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error
 
 	r, err := c.Wait(ctx, &pb.WaitRequest{SlotName: slotName})
 	if err != nil {
+		if isConnectionError(err) {
+			return WaitForSlot(ctx, slotName, config)
+		}
+
 		return err
 	}
 
@@ -37,6 +42,14 @@ func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error
 	}
 
 	return nil
+}
+
+func isConnectionError(err error) bool {
+	return strings.Contains(err.Error(), "connection refused") ||
+		strings.Contains(err.Error(), " error reading from server") ||
+		strings.Contains(err.Error(), "connection reset by peer") ||
+		strings.Contains(err.Error(), "transport is closing") ||
+		strings.Contains(err.Error(), "connection closed")
 }
 
 func WaitUntilConnected(ctx context.Context, socketPath string) (*grpc.ClientConn, error) {
