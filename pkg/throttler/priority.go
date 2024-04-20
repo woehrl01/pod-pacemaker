@@ -52,7 +52,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 type ConcurrencyController struct {
 	pq            PriorityQueue
 	mu            sync.Mutex
-	cond          *sync.Cond
+	condChan      chan struct{}
 	condition     func(int) (bool, error)
 	conditionText string
 	onAquire      func()
@@ -97,9 +97,12 @@ func NewConcurrencyControllerWithDynamicCondition(options *DynamicOptions) (*Con
 		onAquire:      options.OnAquire,
 		active:        make(map[string]*Item),
 	}
-	cc.cond = sync.NewCond(&cc.mu)
+	cc.condChan = make(chan struct{})
 	return cc, func() {
-		cc.cond.Broadcast()
+		cc.mu.Lock()
+		defer cc.mu.Unlock()
+		close(cc.condChan)
+		cc.condChan = make(chan struct{})
 	}
 }
 
@@ -125,7 +128,8 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		if ctx.Err() != nil { // Context was cancelled.
 			if !ok || active == item { // Remove the item if it wasn't activated.
 				heap.Remove(&cc.pq, item.index)
-				cc.cond.Broadcast()
+				close(cc.condChan)
+				cc.condChan = make(chan struct{})
 			}
 			cc.mu.Unlock()
 			return ctx.Err()
@@ -145,12 +149,8 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		}
 		cc.mu.Unlock()
 		select {
-		case <-ctx.Done():
-			// The operation was cancelled, clean-up is handled at the beginning of the loop.
-		default:
-			cc.cond.L.Lock()
-			cc.cond.Wait()
-			cc.cond.L.Unlock()
+			case <-cc.condChan:
+			case <-ctx.Done():
 		}
 	}
 }
@@ -163,6 +163,7 @@ func (cc *ConcurrencyController) ReleaseSlot(ctx context.Context, slotId string)
 		if cc.pq.Len() > 0 {
 			heap.Pop(&cc.pq)
 		}
-		cc.cond.Broadcast()
+		close(cc.condChan)
+		cc.condChan = make(chan struct{})
 	}
 }
