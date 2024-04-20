@@ -79,7 +79,7 @@ func (cc *ConcurrencyController) broadcastPossibleConditionChange() {
 
 func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, data Data) error {
 	for {
-		done, err := func() (bool, error) {
+		if done, err := func() (bool, error) {
 			cc.mu.Lock()
 			defer cc.mu.Unlock()
 			_, isActive := cc.activeItems[slotId]
@@ -103,9 +103,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 				}
 			}
 			return false, nil
-		}()
-
-		if done {
+		}(); done {
 			return err
 		}
 
