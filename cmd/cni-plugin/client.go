@@ -39,10 +39,6 @@ func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error
 	return nil
 }
 
-func isConnectionError(err error) bool {
-	return err.Error() == "rpc error: code = Unavailable desc = error reading from server: EOF"
-}
-
 func WaitUntilConnected(ctx context.Context, socketPath string) (*grpc.ClientConn, error) {
 	server := fmt.Sprintf("unix://%s", socketPath)
 	var conn *grpc.ClientConn
