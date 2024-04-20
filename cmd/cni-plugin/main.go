@@ -120,12 +120,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(conf.MaxWaitTimeInSeconds))
 	defer totalRequestCancel()
 
-	retries := 5
 	for {
 		if err := WaitForSlot(ctx, slotName, conf); err != nil {
-			if ctx.Err() != nil && isConnectionError(err) && retries > 0 {
+			if ctx.Err() != nil && isConnectionError(err) {
 				logrus.Warnf("Failed to connect to daemon, retrying: %v", err)
-				retries--
 				// random backoff
 				backoff := time.Duration(rand.Intn(5)) * time.Second
 				time.Sleep(backoff)
