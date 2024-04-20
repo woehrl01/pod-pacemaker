@@ -131,6 +131,8 @@ spec:
               - --tail
               - "100"
               - --previous
+            check:
+              (@ == null): true
         - command:
             entrypoint: kubectl
             args:
@@ -143,6 +145,4 @@ spec:
               - node-daemon
               - --tail
               - "100"
-            check:
-              (@ == null): true
         - events: {}
