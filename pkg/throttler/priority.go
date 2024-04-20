@@ -97,6 +97,7 @@ func NewConcurrencyControllerWithDynamicCondition(options *DynamicOptions) (*Con
 		conditionText: options.ConditionStr,
 		onAquire:      options.OnAquire,
 		active:        make(map[string]*Item),
+		currentItems:  make(map[string]*Item),
 	}
 	cc.waitOnCondition = make(chan struct{})
 	return cc, func() {
@@ -152,7 +153,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 				cc.mu.Unlock()
 				return err
 			}
-			if cond {
+			if cond { // Item can be activated.
 				cc.active[slotId] = item
 				heap.Remove(&cc.pq, item.index)
 				cc.onAquire()
