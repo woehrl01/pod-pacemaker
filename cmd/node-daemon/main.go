@@ -19,6 +19,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -120,16 +121,10 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	podEventHandler := NewPodEventHandler(throttler, ctx)
 
 	removeOutdated := func() {
-		list := podInformer.Informer().GetIndexer().List()
-		currentPods := make([]*v1.Pod, len(list))
-		for _, pod := range list {
-			p := pod.(*v1.Pod)
-			if p == nil {
-				continue
-			}
-			currentPods = append(currentPods, p)
+		currentPods, err := podInformer.Lister().Pods(v1.NamespaceAll).List(labels.Everything())
+		if err == nil {
+			podEventHandler.RemoveOutdatedSlots(currentPods)
 		}
-		podEventHandler.RemoveOutdatedSlots(currentPods)
 	}
 
 	informer := podInformer.Informer()
