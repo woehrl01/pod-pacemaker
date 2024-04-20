@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"woehrl01/pod-pacemaker/pkg/podaccessor"
@@ -16,7 +19,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -59,57 +61,84 @@ func main() {
 
 	ctx := context.Background()
 
-	stopper := make(chan struct{})
-	defer close(stopper)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	dynamicThrottlers := throttler.NewDynamicThrottler()
 
 	throttler := throttler.NewAllThrottler(dynamicThrottlers)
 
-	podAccessor := startPodHandler(ctx, clientset, throttler, nodeName, stopper)
-	startConfigHandler(config, dynamicThrottlers, nodeName, stopper)
+	podAccessor := startPodHandler(ctx, clientset, throttler, nodeName, ctx.Done())
+	startConfigHandler(config, dynamicThrottlers, nodeName, ctx.Done())
 	removeStartupTaint(clientset, nodeName)
 
+	wg := sync.WaitGroup{}
 	if *metricsEnabled {
-		startPrometheusMetricsServer()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			startPrometheusMetricsServer(ctx.Done())
+		}()
 	}
 
-	startGrpcServer(throttler, Options{
-		Socket:                *daemonSocket,
-		SkipDaemonSets:        *skipDaemonSets,
-		TrackInflightRequests: *trackInflightRequests,
-	}, podAccessor)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startGrpcServer(throttler, Options{
+			Socket:                *daemonSocket,
+			SkipDaemonSets:        *skipDaemonSets,
+			TrackInflightRequests: *trackInflightRequests,
+		}, podAccessor, ctx.Done())
+		wg.Done()
+	}()
 
-	<-stopper
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	defer func() {
+		signal.Stop(c)
+		cancel()
+	}()
+	go func() {
+		select {
+		case <-c:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	log.Infof("Node daemon started on node %s", nodeName)
+
+	wg.Wait()
 }
 
-func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, nodeName string, stopper chan struct{}) podaccessor.PodAccessor {
+func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, nodeName string, stopper <-chan struct{}) podaccessor.PodAccessor {
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 	}))
 
 	podInformer := factory.Core().V1().Pods()
-
 	podEventHandler := NewPodEventHandler(throttler, ctx)
+
+	removeOutdated := func() {
+		currentPods := make([]*v1.Pod, 0)
+			for _, pod := range podInformer.Informer().GetIndexer().List() {
+				currentPods = append(currentPods, pod.(*v1.Pod))
+			}
+			podEventHandler.RemoveOutdatedSlots(currentPods)
+	}
 
 	informer := podInformer.Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			podEventHandler.OnAdd(obj.(*v1.Pod))
-			currentPods, err := podInformer.Lister().Pods(v1.NamespaceAll).List(labels.Everything())
-			if err == nil {
-				podEventHandler.RemoveOutdatedSlots(currentPods)
-			}
+			removeOutdated()
 		},
 		DeleteFunc: func(obj interface{}) {
 			podEventHandler.OnDelete(obj.(*v1.Pod))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			podEventHandler.OnAdd(newObj.(*v1.Pod))
-			currentPods, err := podInformer.Lister().Pods(v1.NamespaceAll).List(labels.Everything())
-			if err == nil {
-				podEventHandler.RemoveOutdatedSlots(currentPods)
-			}
+			removeOutdated()
 		},
 	})
 
@@ -122,7 +151,7 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	return podaccessor.NewLocalPodsAccessor(informer.GetIndexer())
 }
 
-func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.DynamicThrottler, nodeName string, stopper chan struct{}) {
+func startConfigHandler(config *rest.Config, dynamicThrottlers throttler.DynamicThrottler, nodeName string, stopper <-chan struct{}) {
 	gvr := schema.GroupVersionResource{
 		Group:    "woehrl.net",
 		Version:  "v1alpha",
@@ -189,9 +218,17 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 	}
 }
 
-func startPrometheusMetricsServer() {
+func startPrometheusMetricsServer(stopper <-chan struct{}) {
+	srv := &http.Server{
+		Addr: fmt.Sprintf(":%d", *metricsPort),
+	}
+
+	http.Handle("/metrics", promhttp.Handler())
+
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil))
+		<-stopper
+		srv.Shutdown(context.Background())
 	}()
+
+	log.Fatal(srv.ListenAndServe(), nil)
 }

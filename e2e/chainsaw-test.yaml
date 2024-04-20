@@ -95,6 +95,16 @@ spec:
                 echo "Failure: There are 5 or more ready replicas."
                 exit 1  # Exit with failure
               fi
+        - command: # we delete the pod-pacemaker pod in the meantime to test recovery
+            entrypoint: kubectl
+            args:
+              - delete
+              - pod
+              - -l
+              - name=pod-pacemaker
+              - -n
+              - default
+
         - wait:
             apiVersion: apps/v1
             kind: Deployment
@@ -120,3 +130,5 @@ spec:
               - node-daemon
               - --tail
               - "100"
+      finally:
+        - events: {}
