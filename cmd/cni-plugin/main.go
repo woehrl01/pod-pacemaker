@@ -25,6 +25,7 @@ type PluginConf struct {
 	MaxWaitTimeInSeconds       int32    `json:"maxWaitTimeInSeconds"`
 	NamespaceExclusions        []string `json:"namespaceExclusions"`
 	SuccessOnConnectionTimeout bool     `json:"successOnConnectionTimeout"`
+	DisableThrottling          bool     `json:"disableThrottling"`
 }
 
 type K8sArgs struct {
@@ -92,6 +93,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if err != nil {
 		logrus.Errorf("Failed to call previous plugin: %v", err)
 		return err
+	}
+
+	if conf.DisableThrottling {
+		logrus.Infof("Throttling disabled")
+		return types.PrintResult(result, conf.CNIVersion)
 	}
 
 	var k8sArgs K8sArgs
