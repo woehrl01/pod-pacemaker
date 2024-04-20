@@ -143,4 +143,6 @@ spec:
               - node-daemon
               - --tail
               - "100"
+            check:
+              (@ == null): true
         - events: {}
