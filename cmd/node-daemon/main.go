@@ -95,6 +95,8 @@ func main() {
 		}
 	}()
 
+	log.Infof("Node daemon started on node %s", nodeName)
+
 	<-ctx.Done()
 }
 
