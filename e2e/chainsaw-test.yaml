@@ -130,3 +130,5 @@ spec:
               - node-daemon
               - --tail
               - "100"
+      finally:
+        - events: {}
