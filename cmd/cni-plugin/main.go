@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"slices"
 	"time"
@@ -119,13 +120,15 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(conf.MaxWaitTimeInSeconds))
 	defer totalRequestCancel()
 
-	retries := 3
+	retries := 5
 	for {
 		if err := WaitForSlot(ctx, slotName, conf); err != nil {
 			if ctx.Err() != nil && isConnectionError(err) && retries > 0 {
 				logrus.Warnf("Failed to connect to daemon, retrying: %v", err)
 				retries--
-				time.Sleep(1 * time.Second)
+				// random backoff
+				backoff := time.Duration(rand.Intn(5)) * time.Second
+				time.Sleep(backoff)
 				continue
 			}
 			logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
