@@ -58,8 +58,8 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 
 func main() {
 	skel.PluginMainFuncs(skel.CNIFuncs{
-		Add: cmdAdd,
-		Del: cmdDel,
+		Add:   cmdAdd,
+		Del:   cmdDel,
 		Check: cmdCheck,
 	}, version.All, bv.BuildString("pod-pacemaker"))
 }

@@ -92,14 +92,14 @@ func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController
 
 func NewConcurrencyControllerWithDynamicCondition(options *DynamicOptions) (*ConcurrencyController, func()) {
 	cc := &ConcurrencyController{
-		pq:            make(PriorityQueue, 0),
-		condition:     options.Condition,
-		conditionText: options.ConditionStr,
-		onAquire:      options.OnAquire,
-		active:        make(map[string]*Item),
-		currentItems:  make(map[string]*Item),
+		pq:              make(PriorityQueue, 0),
+		condition:       options.Condition,
+		conditionText:   options.ConditionStr,
+		onAquire:        options.OnAquire,
+		active:          make(map[string]*Item),
+		currentItems:    make(map[string]*Item),
+		waitOnCondition: make(chan struct{}),
 	}
-	cc.waitOnCondition = make(chan struct{})
 	return cc, func() {
 		cc.mu.Lock()
 		defer cc.mu.Unlock()
@@ -127,7 +127,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		item = existing
 	} else {
 		item := &Item{
-			value:    slotId,
+			value: slotId,
 		}
 		cc.currentItems[slotId] = item
 		heap.Push(&cc.pq, item)
