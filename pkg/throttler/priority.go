@@ -149,8 +149,8 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		}
 		cc.mu.Unlock()
 		select {
-			case <-cc.condChan:
-			case <-ctx.Done():
+		case <-cc.condChan:
+		case <-ctx.Done():
 		}
 	}
 }
