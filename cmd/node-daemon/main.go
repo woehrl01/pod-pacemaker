@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	"woehrl01/pod-pacemaker/pkg/podaccessor"
@@ -71,15 +72,25 @@ func main() {
 	startConfigHandler(config, dynamicThrottlers, nodeName, ctx.Done())
 	removeStartupTaint(clientset, nodeName)
 
+	wg := sync.WaitGroup{}
 	if *metricsEnabled {
-		go startPrometheusMetricsServer()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			startPrometheusMetricsServer(ctx.Done())
+		}()
 	}
 
-	go startGrpcServer(throttler, Options{
-		Socket:                *daemonSocket,
-		SkipDaemonSets:        *skipDaemonSets,
-		TrackInflightRequests: *trackInflightRequests,
-	}, podAccessor, ctx.Done())
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startGrpcServer(throttler, Options{
+			Socket:                *daemonSocket,
+			SkipDaemonSets:        *skipDaemonSets,
+			TrackInflightRequests: *trackInflightRequests,
+		}, podAccessor, ctx.Done())
+		wg.Done()
+	}()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -97,7 +108,7 @@ func main() {
 
 	log.Infof("Node daemon started on node %s", nodeName)
 
-	<-ctx.Done()
+	wg.Wait()
 }
 
 func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throttler throttler.Throttler, nodeName string, stopper <-chan struct{}) podaccessor.PodAccessor {
@@ -206,7 +217,17 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 	}
 }
 
-func startPrometheusMetricsServer() {
+func startPrometheusMetricsServer(stopper <-chan struct{}) {
+	srv := &http.Server{
+		Addr: fmt.Sprintf(":%d", *metricsPort),
+	}
+
 	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil))
+
+	go func() {
+		<-stopper
+		srv.Shutdown(context.Background())
+	}()
+
+	log.Fatal(srv.ListenAndServe(), nil)
 }
