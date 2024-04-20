@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
-	"os/signal"
 	"sync"
 	"syscall"
 	"time"
@@ -133,28 +131,13 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 
 func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podaccessor.PodAccessor, stopper <-chan struct{}) {
 	_ = syscall.Unlink(o.Socket) // clean up old socket and ignore errors
-
 	lis, err := net.Listen("unix", o.Socket)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-
-	// Unix sockets must be unlink()ed before being reused again.
-	// Handle common process-killing signals so we can gracefully shut down:
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
-	go func(c chan os.Signal) {
-		// Wait for a SIGINT or SIGKILL:
-		sig := <-c
-		log.Printf("Caught signal %s: shutting down.", sig)
-		// Stop listening (and unlink the socket if unix type):
-		lis.Close()
-		// And we're done:
-		os.Exit(0)
-	}(sigc)
+	defer lis.Close()
 
 	s := grpc.NewServer()
-
 	go func() {
 		<-stopper
 		s.GracefulStop()
