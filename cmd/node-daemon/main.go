@@ -63,7 +63,6 @@ func main() {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-
 	dynamicThrottlers := throttler.NewDynamicThrottler()
 
 	throttler := throttler.NewAllThrottler(dynamicThrottlers)
@@ -207,5 +206,5 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 
 func startPrometheusMetricsServer() {
 	http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil))
 }
