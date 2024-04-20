@@ -120,11 +120,12 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	podEventHandler := NewPodEventHandler(throttler, ctx)
 
 	removeOutdated := func() {
-		currentPods := make([]*v1.Pod, 0)
-			for _, pod := range podInformer.Informer().GetIndexer().List() {
-				currentPods = append(currentPods, pod.(*v1.Pod))
-			}
-			podEventHandler.RemoveOutdatedSlots(currentPods)
+		list := podInformer.Informer().GetIndexer().List()
+		currentPods := make([]*v1.Pod, len(list))
+		for _, pod := range list {
+			currentPods = append(currentPods, pod.(*v1.Pod))
+		}
+		podEventHandler.RemoveOutdatedSlots(currentPods)
 	}
 
 	informer := podInformer.Informer()
