@@ -95,6 +95,11 @@ spec:
                 echo "Failure: There are 5 or more ready replicas."
                 exit 1  # Exit with failure
               fi
+        - delete: # we delete the pod-pacemaker pod in the meantime to test recovery
+            ref:
+              apiVersion: v1
+              kind: Pod
+              labels: name=pod-pacemaker
         - wait:
             apiVersion: apps/v1
             kind: Deployment
