@@ -140,9 +140,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		active, ok := cc.active[slotId]
 		if ctx.Err() != nil { // Context was cancelled.
 			if !ok { // Remove the item if it wasn't activated.
-				heap.Remove(&cc.pq, item.index)
-				delete(cc.currentItems, slotId)
-				cc.broadcastPossibleConditionChange()
+				cc.removeItem(item)
 			}
 			cc.mu.Unlock()
 			return ctx.Err()
@@ -155,7 +153,6 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 			}
 			if cond { // Item can be activated.
 				cc.active[slotId] = item
-				heap.Remove(&cc.pq, item.index)
 				cc.onAquire()
 				cc.mu.Unlock()
 				return nil
@@ -169,14 +166,17 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 	}
 }
 
+func (cc *ConcurrencyController) removeItem(item *Item) {
+	delete(cc.active, item.value)
+	delete(cc.currentItems, item.value)
+	heap.Remove(&cc.pq, item.index)
+	cc.broadcastPossibleConditionChange()
+}
+
 func (cc *ConcurrencyController) ReleaseSlot(ctx context.Context, slotId string) {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
-	if _, ok := cc.active[slotId]; ok {
-		delete(cc.active, slotId)
-		if cc.pq.Len() > 0 {
-			heap.Pop(&cc.pq)
-		}
-		cc.broadcastPossibleConditionChange()
+	if item, ok := cc.active[slotId]; ok {
+		cc.removeItem(item)
 	}
 }
