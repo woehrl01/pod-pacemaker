@@ -11,18 +11,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Item struct {
-	value string
-}
-
 type ConcurrencyController struct {
 	mu              sync.Mutex
 	waitOnCondition chan struct{}
 	condition       func(int) (bool, error)
 	conditionText   string
 	onAquire        func()
-	activeItems     map[string]*Item
-	inflightItems   map[string]*Item
+	activeItems     map[string]bool
 }
 
 type DynamicOptions struct {
@@ -60,8 +55,7 @@ func NewConcurrencyControllerWithDynamicCondition(options *DynamicOptions) (*Con
 		condition:       options.Condition,
 		conditionText:   options.ConditionStr,
 		onAquire:        options.OnAquire,
-		activeItems:     make(map[string]*Item),
-		inflightItems:   make(map[string]*Item),
+		activeItems:     make(map[string]bool),
 		waitOnCondition: make(chan struct{}),
 	}
 	return cc, func() {
@@ -84,37 +78,24 @@ func (cc *ConcurrencyController) broadcastPossibleConditionChange() {
 }
 
 func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, data Data) error {
-	cc.mu.Lock()
-	var item *Item
-	// If we already have an item for this slot, use it.
-	if existing, ok := cc.inflightItems[slotId]; ok {
-		item = existing
-	} else {
-		item := &Item{
-			value: slotId,
-		}
-		cc.inflightItems[slotId] = item
-	}
-	cc.mu.Unlock()
-
 	for {
 		cc.mu.Lock()
-		active, ok := cc.activeItems[slotId]
+		_, isActive := cc.activeItems[slotId]
 		if ctx.Err() != nil { // Context was cancelled.
-			if !ok { // Remove the item if it wasn't activated.
-				cc.removeItem(item)
+			if !isActive { // Remove the item if it wasn't activated.
+				cc.removeItem(slotId)
 			}
 			cc.mu.Unlock()
 			return ctx.Err()
 		}
-		if active == nil {
+		if !isActive {
 			cond, err := cc.condition(len(cc.activeItems))
 			if err != nil {
 				cc.mu.Unlock()
 				return err
 			}
 			if cond { // Item can be activated.
-				cc.activeItems[slotId] = item
+				cc.activeItems[slotId] = true
 				cc.onAquire()
 				cc.mu.Unlock()
 				return nil
@@ -128,16 +109,15 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 	}
 }
 
-func (cc *ConcurrencyController) removeItem(item *Item) {
-	delete(cc.activeItems, item.value)
-	delete(cc.inflightItems, item.value)
+func (cc *ConcurrencyController) removeItem(slotId string) {
+	delete(cc.activeItems, slotId)
 	cc.broadcastPossibleConditionChange()
 }
 
 func (cc *ConcurrencyController) ReleaseSlot(ctx context.Context, slotId string) {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
-	if item, ok := cc.activeItems[slotId]; ok {
-		cc.removeItem(item)
+	if _, ok := cc.activeItems[slotId]; ok {
+		cc.removeItem(slotId)
 	}
 }
