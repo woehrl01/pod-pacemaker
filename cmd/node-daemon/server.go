@@ -131,7 +131,7 @@ func (s *podLimitService) Wait(ctx context.Context, in *pb.WaitRequest) (*pb.Wai
 	return &pb.WaitResponse{Success: true, Message: "Waited successfully"}, nil
 }
 
-func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podaccessor.PodAccessor) {
+func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podaccessor.PodAccessor, stopper <-chan struct{}) {
 	_ = syscall.Unlink(o.Socket) // clean up old socket and ignore errors
 
 	lis, err := net.Listen("unix", o.Socket)
@@ -154,6 +154,11 @@ func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podac
 	}(sigc)
 
 	s := grpc.NewServer()
+
+	go func() {
+		<-stopper
+		s.GracefulStop()
+	}()
 
 	service := NewPodLimitersServer(throttler, podAccessor, o)
 

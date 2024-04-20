@@ -46,17 +46,17 @@ func buildSlotName(pod *v1.Pod) string {
 
 func (p *PodEventHandler) RemoveOutdatedSlots(currentPods []*v1.Pod) {
 	activeSlots := p.throttler.ActiveSlots()
+
+	currentPodNames := make(map[string]bool, len(currentPods))
+	for _, pod := range currentPods {
+		currentPodNames[buildSlotName(pod)] = true
+	}
+
 	for _, slot := range activeSlots {
-		found := false
-		for _, pod := range currentPods {
-			if slot == buildSlotName(pod) {
-				found = true
-				break
-			}
+		if _, ok := currentPodNames[slot]; ok {
+			continue
 		}
-		if !found {
-			log.WithField("slot", slot).Info("Removing outdated slot")
-			p.throttler.ReleaseSlot(p.ctx, slot)
-		}
+		log.WithField("slot", slot).Info("Removing outdated slot")
+		p.throttler.ReleaseSlot(p.ctx, slot)
 	}
 }
