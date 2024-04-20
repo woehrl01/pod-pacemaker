@@ -1,7 +1,6 @@
 package throttler
 
 import (
-	"container/heap"
 	"context"
 	"fmt"
 	"math"
@@ -12,51 +11,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Item struct {
-	value    string
-	priority int
-	index    int
-}
-
-type PriorityQueue []*Item
-
-func (pq PriorityQueue) Len() int { return len(pq) }
-
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].priority > pq[j].priority
-}
-
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
-}
-
-func (pq *PriorityQueue) Push(x interface{}) {
-	n := len(*pq)
-	item := x.(*Item)
-	item.index = n
-	*pq = append(*pq, item)
-}
-
-func (pq *PriorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	item := old[n-1]
-	old[n-1] = nil
-	item.index = -1
-	*pq = old[0 : n-1]
-	return item
-}
-
 type ConcurrencyController struct {
-	pq            PriorityQueue
-	mu            sync.Mutex
-	cond          *sync.Cond
-	condition     func(int) (bool, error)
-	conditionText string
-	onAquire      func()
-	active        map[string]*Item
+	mu              sync.Mutex
+	waitOnCondition chan struct{}
+	condition       func(int) (bool, error)
+	conditionText   string
+	onAquire        func()
+	activeItems     map[string]bool
 }
 
 type DynamicOptions struct {
@@ -65,7 +26,7 @@ type DynamicOptions struct {
 	ConditionStr string
 }
 
-func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController {
+func NewDynamicConcurrencyThrottler(staticLimit int, perCpu string) *ConcurrencyController {
 	limit := staticLimit
 	limitType := "static"
 	if staticLimit == 0 && perCpu != "" {
@@ -91,15 +52,16 @@ func NewPriorityThrottler(staticLimit int, perCpu string) *ConcurrencyController
 
 func NewConcurrencyControllerWithDynamicCondition(options *DynamicOptions) (*ConcurrencyController, func()) {
 	cc := &ConcurrencyController{
-		pq:            make(PriorityQueue, 0),
-		condition:     options.Condition,
-		conditionText: options.ConditionStr,
-		onAquire:      options.OnAquire,
-		active:        make(map[string]*Item),
+		condition:       options.Condition,
+		conditionText:   options.ConditionStr,
+		onAquire:        options.OnAquire,
+		activeItems:     make(map[string]bool),
+		waitOnCondition: make(chan struct{}),
 	}
-	cc.cond = sync.NewCond(&cc.mu)
 	return cc, func() {
-		cc.cond.Broadcast()
+		cc.mu.Lock()
+		defer cc.mu.Unlock()
+		cc.broadcastPossibleConditionChange()
 	}
 }
 
@@ -109,35 +71,31 @@ func (cc *ConcurrencyController) String() string {
 	return fmt.Sprintf("PriorityThrottler, condition: %s", cc.conditionText)
 }
 
+func (cc *ConcurrencyController) broadcastPossibleConditionChange() {
+	// Broadcast to all waiting goroutines. This needs be called with the lock held.
+	close(cc.waitOnCondition)
+	cc.waitOnCondition = make(chan struct{})
+}
+
 func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, data Data) error {
-	cc.mu.Lock()
-
-	item := &Item{
-		value:    slotId,
-		priority: data.Priority,
-	}
-	heap.Push(&cc.pq, item)
-	cc.mu.Unlock()
-
 	for {
 		cc.mu.Lock()
-		active, ok := cc.active[slotId]
+		_, isActive := cc.activeItems[slotId]
 		if ctx.Err() != nil { // Context was cancelled.
-			if !ok || active == item { // Remove the item if it wasn't activated.
-				heap.Remove(&cc.pq, item.index)
-				cc.cond.Broadcast()
+			if !isActive { // Remove the item if it wasn't activated.
+				cc.removeItem(slotId)
 			}
 			cc.mu.Unlock()
 			return ctx.Err()
 		}
-		if active == nil {
-			cond, err := cc.condition(len(cc.active))
+		if !isActive {
+			cond, err := cc.condition(len(cc.activeItems))
 			if err != nil {
 				cc.mu.Unlock()
 				return err
 			}
-			if cond {
-				cc.active[slotId] = item
+			if cond { // Item can be activated.
+				cc.activeItems[slotId] = true
 				cc.onAquire()
 				cc.mu.Unlock()
 				return nil
@@ -145,24 +103,21 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		}
 		cc.mu.Unlock()
 		select {
+		case <-cc.waitOnCondition:
 		case <-ctx.Done():
-			// The operation was cancelled, clean-up is handled at the beginning of the loop.
-		default:
-			cc.cond.L.Lock()
-			cc.cond.Wait()
-			cc.cond.L.Unlock()
 		}
 	}
+}
+
+func (cc *ConcurrencyController) removeItem(slotId string) {
+	delete(cc.activeItems, slotId)
+	cc.broadcastPossibleConditionChange()
 }
 
 func (cc *ConcurrencyController) ReleaseSlot(ctx context.Context, slotId string) {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
-	if _, ok := cc.active[slotId]; ok {
-		delete(cc.active, slotId)
-		if cc.pq.Len() > 0 {
-			heap.Pop(&cc.pq)
-		}
-		cc.cond.Broadcast()
+	if _, ok := cc.activeItems[slotId]; ok {
+		cc.removeItem(slotId)
 	}
 }
