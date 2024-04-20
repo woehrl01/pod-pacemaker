@@ -6,6 +6,8 @@ import (
 
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
+	log "github.com/sirupsen/logrus"
+
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -40,4 +42,21 @@ func (p *PodEventHandler) OnDelete(pod *v1.Pod) {
 
 func buildSlotName(pod *v1.Pod) string {
 	return fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+}
+
+func (p *PodEventHandler) RemoveOutdatedSlots(currentPods []*v1.Pod) {
+	activeSlots := p.throttler.ActiveSlots()
+	for _, slot := range activeSlots {
+		found := false
+		for _, pod := range currentPods {
+			if slot == buildSlotName(pod) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.WithField("slot", slot).Info("Removing outdated slot")
+			p.throttler.ReleaseSlot(p.ctx, slot)
+		}
+	}
 }

@@ -124,3 +124,13 @@ func (cc *ConcurrencyController) ReleaseSlot(ctx context.Context, slotId string)
 	defer cc.mu.Unlock()
 	cc.removeItem(slotId)
 }
+
+func (cc *ConcurrencyController) ActiveSlots() []string {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	var slots []string
+	for slot := range cc.activeItems {
+		slots = append(slots, slot)
+	}
+	return slots
+}

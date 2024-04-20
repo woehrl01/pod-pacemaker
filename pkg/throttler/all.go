@@ -49,6 +49,16 @@ func (t *allThrottler) ReleaseSlot(ctx context.Context, slotId string) {
 	}
 }
 
+func (t *allThrottler) ActiveSlots() []string {
+	list := t.dynamic.GetThrottlers()
+
+	activeSlots := []string{}
+	for _, throttle := range list {
+		activeSlots = append(activeSlots, throttle.ActiveSlots()...)
+	}
+	return activeSlots
+}
+
 type dynamicThrottler struct {
 	activeThrottlers []Throttler
 }
