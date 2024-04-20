@@ -29,10 +29,6 @@ func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error
 
 	r, err := c.Wait(ctx, &pb.WaitRequest{SlotName: slotName})
 	if err != nil {
-		if isConnectionError(err) {
-			logrus.Warnf("Connection to daemon lost, retrying")
-			return WaitForSlot(ctx, slotName, config)
-		}
 		return err
 	}
 
