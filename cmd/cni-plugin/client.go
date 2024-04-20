@@ -49,7 +49,8 @@ func isConnectionError(err error) bool {
 		strings.Contains(err.Error(), " error reading from server") ||
 		strings.Contains(err.Error(), "connection reset by peer") ||
 		strings.Contains(err.Error(), "transport is closing") ||
-		strings.Contains(err.Error(), "connection closed")
+		strings.Contains(err.Error(), "connection closed") ||
+		strings.Contains(err.Error(), "Error while dialing")
 }
 
 func WaitUntilConnected(ctx context.Context, socketPath string) (*grpc.ClientConn, error) {
