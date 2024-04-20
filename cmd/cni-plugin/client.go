@@ -15,7 +15,6 @@ import (
 )
 
 func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error {
-
 	conn, err := WaitUntilConnected(ctx, config.DaemonSocketPath)
 	if err != nil {
 		if config.SuccessOnConnectionTimeout {
@@ -30,10 +29,6 @@ func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error
 
 	r, err := c.Wait(ctx, &pb.WaitRequest{SlotName: slotName})
 	if err != nil {
-		if isConnectionError(err) {
-			return WaitForSlot(ctx, slotName, config)
-		}
-
 		return err
 	}
 

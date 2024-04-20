@@ -119,8 +119,15 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(conf.MaxWaitTimeInSeconds))
 	defer totalRequestCancel()
 
-	err = WaitForSlot(ctx, slotName, conf)
-	if err != nil {
+	for {
+		err := WaitForSlot(ctx, slotName, conf)
+		if err == nil {
+			break
+		}
+		if isConnectionError(err) {
+			logrus.Warnf("Failed to connect to daemon, retrying: %v", err)
+			continue
+		}
 		logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
 		return err
 	}
