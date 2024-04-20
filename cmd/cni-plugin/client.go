@@ -13,9 +13,7 @@ import (
 	pb "woehrl01/pod-pacemaker/proto"
 )
 
-func WaitForSlot(slotName string, config *PluginConf) error {
-	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(config.MaxWaitTimeInSeconds))
-	defer totalRequestCancel()
+func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error {
 
 	conn, err := WaitUntilConnected(ctx, config.DaemonSocketPath)
 	if err != nil {
@@ -31,6 +29,10 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 
 	r, err := c.Wait(ctx, &pb.WaitRequest{SlotName: slotName})
 	if err != nil {
+		if isConnectionError(err) {
+			logrus.Warnf("Connection to daemon lost, retrying")
+			return WaitForSlot(ctx, slotName, config)
+		}
 		return err
 	}
 
@@ -39,6 +41,10 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 	}
 
 	return nil
+}
+
+func isConnectionError(err error) bool {
+	return err.Error() == "rpc error: code = Unavailable desc = error reading from server: EOF"
 }
 
 func WaitUntilConnected(ctx context.Context, socketPath string) (*grpc.ClientConn, error) {

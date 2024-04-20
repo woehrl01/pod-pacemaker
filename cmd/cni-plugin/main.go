@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -113,7 +115,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	slotName := fmt.Sprintf("%s/%s", string(k8sArgs.K8S_POD_NAMESPACE), string(k8sArgs.K8S_POD_NAME))
 	logrus.Infof("Waiting for slot %s", slotName)
-	err = WaitForSlot(slotName, conf)
+
+	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(conf.MaxWaitTimeInSeconds))
+	defer totalRequestCancel()
+
+	err = WaitForSlot(ctx, slotName, conf)
 	if err != nil {
 		logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
 		return err
