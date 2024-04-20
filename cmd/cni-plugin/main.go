@@ -122,7 +122,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	for {
 		if err := WaitForSlot(ctx, slotName, conf); err != nil {
-			if ctx.Err() != nil && isConnectionError(err) {
+			if ctx.Err() == nil && isConnectionError(err) {
 				logrus.Warnf("Failed to connect to daemon, retrying: %v", err)
 				// random backoff
 				backoff := time.Duration(rand.Intn(5)) * time.Second
