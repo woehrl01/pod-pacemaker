@@ -81,6 +81,10 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 	for {
 		cc.mu.Lock()
 		_, isActive := cc.activeItems[slotId]
+		if isActive { // Item is already active.
+			cc.mu.Unlock()
+			return nil
+		}
 		if ctx.Err() != nil { // Context was cancelled.
 			if !isActive { // Remove the item if it wasn't activated.
 				cc.removeItem(slotId)
@@ -88,7 +92,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 			cc.mu.Unlock()
 			return ctx.Err()
 		}
-		if !isActive {
+		if !isActive { // Item is not active.
 			cond, err := cc.condition(len(cc.activeItems))
 			if err != nil {
 				cc.mu.Unlock()
@@ -117,7 +121,5 @@ func (cc *ConcurrencyController) removeItem(slotId string) {
 func (cc *ConcurrencyController) ReleaseSlot(ctx context.Context, slotId string) {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
-	if _, ok := cc.activeItems[slotId]; ok {
-		cc.removeItem(slotId)
-	}
+	cc.removeItem(slotId)
 }
