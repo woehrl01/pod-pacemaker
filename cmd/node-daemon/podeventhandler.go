@@ -46,9 +46,10 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 		}
 	}
 	if allStarted {
-		p.throttler.ReleaseSlot(p.ctx, buildSlotName(pod))
+		log.WithField("pod", slotName).Debug("Pod is fully started, releasing slot")
+		p.throttler.ReleaseSlot(p.ctx, slotName)
 	} else {
-		log.WithField("pod", pod).Debug("Pod is not fully started yet")
+		log.WithField("pod", slotName).Debug("Pod is not fully started yet")
 	}
 }
 

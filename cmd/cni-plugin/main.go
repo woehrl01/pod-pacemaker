@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -25,6 +28,7 @@ type PluginConf struct {
 	MaxWaitTimeInSeconds       int32    `json:"maxWaitTimeInSeconds"`
 	NamespaceExclusions        []string `json:"namespaceExclusions"`
 	SuccessOnConnectionTimeout bool     `json:"successOnConnectionTimeout"`
+	DisableThrottling          bool     `json:"disableThrottling"`
 }
 
 type K8sArgs struct {
@@ -94,6 +98,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
+	if conf.DisableThrottling {
+		logrus.Infof("Throttling disabled")
+		return types.PrintResult(result, conf.CNIVersion)
+	}
+
 	var k8sArgs K8sArgs
 	if err := types.LoadArgs(args.Args, &k8sArgs); err != nil {
 		logrus.Errorf("Failed to load K8s args: %v", err)
@@ -107,10 +116,23 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	slotName := fmt.Sprintf("%s/%s", string(k8sArgs.K8S_POD_NAMESPACE), string(k8sArgs.K8S_POD_NAME))
 	logrus.Infof("Waiting for slot %s", slotName)
-	err = WaitForSlot(slotName, conf)
-	if err != nil {
-		logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
-		return err
+
+	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(conf.MaxWaitTimeInSeconds))
+	defer totalRequestCancel()
+
+	for {
+		if err := WaitForSlot(ctx, slotName, conf); err != nil {
+			if ctx.Err() == nil && isConnectionError(err) {
+				logrus.Warnf("Failed to connect to daemon, retrying: %v", err)
+				// random backoff
+				backoff := time.Duration(rand.Intn(5)) * time.Second
+				time.Sleep(backoff)
+				continue
+			}
+			logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
+			return err
+		}
+		break
 	}
 	logrus.Infof("Acquired slot %s", slotName)
 	return types.PrintResult(result, conf.CNIVersion)

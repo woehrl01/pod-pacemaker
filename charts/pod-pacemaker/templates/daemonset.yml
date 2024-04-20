@@ -47,6 +47,7 @@ spec:
             - "--namespace-exclusions={{ join "," .Values.namespaceExclusions }}"
             - "--success-on-connection-timeout={{ .Values.cni.successOnConnectionTimeout }}"
             - "--daemon-socket={{ .Values.daemon.socketFile }}"
+            - "--disable-throttle={{ .Values.cni.disableThrottle }}"
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin

@@ -117,7 +117,7 @@ spec:
             entrypoint: echo
             args:
               - The deployment is available, the init container is done
-      catch:
+      finally:
         - command:
             entrypoint: kubectl
             args:
@@ -130,5 +130,19 @@ spec:
               - node-daemon
               - --tail
               - "100"
-      finally:
+              - --previous
+            check:
+              (@ == null): true
+        - command:
+            entrypoint: kubectl
+            args:
+              - logs
+              - --prefix
+              - -l=name=pod-pacemaker
+              - -n
+              - default
+              - -c
+              - node-daemon
+              - --tail
+              - "100"
         - events: {}

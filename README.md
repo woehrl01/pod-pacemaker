@@ -46,6 +46,7 @@ helm install pod-pacemaker oci://ghcr.io/woehrl01/pod-pacemaker/pod-pacemaker --
 
 > [!NOTE]
 > If you want to uninstall PodPacemaker, you have to manually delete the `/etc/cni/net.d/00-merged-pod-pacemaker.conflist` file from all nodes you have installed PodPacemaker on. This is necessary to remove the CNI plugin from the system, which cannot be done automatically by Helm.
+> Alternatively, you change the helm value `cni.disableThrottle` to `true` before uninstalling the Helm chart. This will effectively make the CNI plugin a no-op and prevent it from interfering with the pod startup process.
 
 ## Configuration
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -13,10 +14,7 @@ import (
 	pb "woehrl01/pod-pacemaker/proto"
 )
 
-func WaitForSlot(slotName string, config *PluginConf) error {
-	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(config.MaxWaitTimeInSeconds))
-	defer totalRequestCancel()
-
+func WaitForSlot(ctx context.Context, slotName string, config *PluginConf) error {
 	conn, err := WaitUntilConnected(ctx, config.DaemonSocketPath)
 	if err != nil {
 		if config.SuccessOnConnectionTimeout {
@@ -39,6 +37,16 @@ func WaitForSlot(slotName string, config *PluginConf) error {
 	}
 
 	return nil
+}
+
+func isConnectionError(err error) bool {
+	errorMsg := err.Error()
+	return strings.Contains(errorMsg, "connection refused") ||
+		strings.Contains(errorMsg, "error reading from server") ||
+		strings.Contains(errorMsg, "connection reset by peer") ||
+		strings.Contains(errorMsg, "transport is closing") ||
+		strings.Contains(errorMsg, "connection closed") ||
+		strings.Contains(errorMsg, "Error while dialing")
 }
 
 func WaitUntilConnected(ctx context.Context, socketPath string) (*grpc.ClientConn, error) {

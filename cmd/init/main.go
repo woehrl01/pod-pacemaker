@@ -25,6 +25,7 @@ var (
 	mergedConfigName           = flag.String("merged-config-name", "00-merged-pod-pacemaker.conflist", "The name of the merged CNI configuration file")
 	namespaceExclusions        = flag.StringSlice("namespace-exclusions", []string{"kube-system"}, "Namespaces to exclude from the CNI configuration")
 	successOnConnectionTimeout = flag.Bool("success-on-connection-timeout", true, "If true, there is no concurrency enforcement if the connection to the daemon times out")
+	disableThrottling          = flag.Bool("disable-throttle", false, "If true, the CNI plugin will not enforce throttling")
 )
 
 func main() {
@@ -123,6 +124,7 @@ func generateCNIConfig(filePath string) error {
 				MaxWaitTimeInSeconds:       *maxWaitTimeInSeconds,
 				NamespaceExclusions:        *namespaceExclusions,
 				SuccessOnConnectionTimeout: *successOnConnectionTimeout,
+				DisableThrottling:          *disableThrottling,
 			},
 		},
 	}
@@ -150,6 +152,7 @@ type CniPlugin struct {
 	MaxWaitTimeInSeconds       int32                 `json:"maxWaitTimeInSeconds"`
 	NamespaceExclusions        []string              `json:"namespaceExclusions"`
 	SuccessOnConnectionTimeout bool                  `json:"successOnConnectionTimeout"`
+	DisableThrottling          bool                  `json:"disableThrottling"`
 }
 
 type CniConfigCapabilities struct {

@@ -5,6 +5,7 @@ cni:
   maxWaitTimeInSeconds: 120 # maximum is 220 seconds because of the default CNI timeout of 4 minutes
   successOnConnectionTimeout: true
   mergedName: 00-merged-pod-pacemaker.conflist
+  disableThrottle: false
 
 daemon:
   socketFile: /var/run/pod-pacemaker/pod-pacemaker.sock
