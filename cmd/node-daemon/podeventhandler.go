@@ -38,14 +38,25 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 		return
 	}
 
-	allStarted := true
+	allStarted := true // checking if all containers are started
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Started == nil || !*containerStatus.Started {
 			allStarted = false
 			break
 		}
 	}
-	if allStarted {
+
+	allTerminated := true // checking if all containers are terminated, e.g. pod is done for jobs
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated == nil {
+			allTerminated = false
+			break
+		}
+	}
+
+	completed := pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed
+
+	if allStarted || allTerminated || completed {
 		log.WithField("pod", slotName).Debug("Pod is fully started, releasing slot")
 		p.throttler.ReleaseSlot(p.ctx, slotName)
 	} else {
