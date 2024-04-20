@@ -7,7 +7,6 @@ import (
 )
 
 type Data struct {
-	Priority int
 	Pod      *v1.Pod
 }
 

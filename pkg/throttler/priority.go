@@ -128,7 +128,6 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 	} else {
 		item := &Item{
 			value:    slotId,
-			priority: data.Priority,
 		}
 		cc.currentItems[slotId] = item
 		heap.Push(&cc.pq, item)
