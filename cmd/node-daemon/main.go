@@ -120,25 +120,24 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	podEventHandler := NewPodEventHandler(throttler, ctx)
 
 	removeOutdated := func() {
-		currentPods := make([]*v1.Pod, 0)
-			for _, pod := range podInformer.Informer().GetIndexer().List() {
-				currentPods = append(currentPods, pod.(*v1.Pod))
-			}
-			podEventHandler.RemoveOutdatedSlots(currentPods)
+		list := podInformer.Informer().GetIndexer().List()
+		currentPods := make([]*v1.Pod, len(list))
+		for _, pod := range list {
+			currentPods = append(currentPods, pod.(*v1.Pod))
+		}
+		podEventHandler.RemoveOutdatedSlots(currentPods)
 	}
 
 	informer := podInformer.Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			podEventHandler.OnAdd(obj.(*v1.Pod))
-			removeOutdated()
 		},
 		DeleteFunc: func(obj interface{}) {
 			podEventHandler.OnDelete(obj.(*v1.Pod))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			podEventHandler.OnAdd(newObj.(*v1.Pod))
-			removeOutdated()
 		},
 	})
 
@@ -147,6 +146,19 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
 		log.Fatal("Failed to sync")
 	}
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				removeOutdated()
+			case <-stopper:
+				return
+			}
+		}
+	}()
 
 	return podaccessor.NewLocalPodsAccessor(informer.GetIndexer())
 }

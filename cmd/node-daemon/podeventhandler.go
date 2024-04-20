@@ -24,6 +24,20 @@ func NewPodEventHandler(throttler throttler.Throttler, ctx context.Context) *Pod
 }
 
 func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
+	activeSlots := p.throttler.ActiveSlots()
+	slotName := buildSlotName(pod)
+	hasSlot := false
+	for _, slot := range activeSlots {
+		if slot == slotName {
+			hasSlot = true
+			break
+		}
+	}
+
+	if !hasSlot { // nothing to do as it has no slot
+		return
+	}
+
 	allStarted := true
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Started == nil || !*containerStatus.Started {
@@ -33,6 +47,8 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 	}
 	if allStarted {
 		p.throttler.ReleaseSlot(p.ctx, buildSlotName(pod))
+	} else {
+		log.WithField("pod", pod).Debug("Pod is not fully started yet")
 	}
 }
 
@@ -56,7 +72,7 @@ func (p *PodEventHandler) RemoveOutdatedSlots(currentPods []*v1.Pod) {
 		if _, ok := currentPodNames[slot]; ok {
 			continue
 		}
-		log.WithField("slot", slot).Info("Removing outdated slot")
+		log.WithField("slot", slot).Warn("Removing outdated slot")
 		p.throttler.ReleaseSlot(p.ctx, slot)
 	}
 }
