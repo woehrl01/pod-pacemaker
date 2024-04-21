@@ -64,8 +64,11 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 
 	completed := pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed
 
-	if allStarted || allTerminated || completed {
+	if allStarted {
 		log.WithField("pod", slotName).Debug("Pod is fully started, releasing slot")
+		p.throttler.ReleaseSlot(p.ctx, slotName)
+	} else if allTerminated || completed {
+		log.WithField("pod", slotName).Debug("Pod is completed, releasing slot")
 		p.throttler.ReleaseSlot(p.ctx, slotName)
 	} else if failedState {
 		log.WithField("pod", slotName).Debug("Pod has failed, releasing slot")
