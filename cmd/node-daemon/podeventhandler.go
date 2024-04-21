@@ -54,10 +54,24 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 		}
 	}
 
+	failedState := false // checking if any container has failed
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Waiting != nil && (containerStatus.State.Waiting.Reason == "CrashLoopBackOff" || containerStatus.State.Waiting.Reason == "CreateContainerConfigError") {
+			failedState = true
+			break
+		}
+	}
+
 	completed := pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed
 
-	if allStarted || allTerminated || completed {
+	if allStarted {
 		log.WithField("pod", slotName).Debug("Pod is fully started, releasing slot")
+		p.throttler.ReleaseSlot(p.ctx, slotName)
+	} else if allTerminated || completed {
+		log.WithField("pod", slotName).Debug("Pod is completed, releasing slot")
+		p.throttler.ReleaseSlot(p.ctx, slotName)
+	} else if failedState {
+		log.WithField("pod", slotName).Debug("Pod has failed, releasing slot")
 		p.throttler.ReleaseSlot(p.ctx, slotName)
 	} else {
 		log.WithField("pod", slotName).Debug("Pod is not fully started yet")
