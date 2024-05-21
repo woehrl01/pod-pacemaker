@@ -50,6 +50,7 @@ func NewConcurrencyControllerBasedOnIOLoad(maxIOLoad string, incrementByStr stri
 	return c
 }
 
+// GetIoWait returns the current IO wait, e.g. 0.0 for 0% and 100.0 for 100%
 func GetIoWait() float64 {
 	perCPU := false // get total load
 	loadFirst, err := cpu.Times(perCPU)
