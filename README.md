@@ -41,7 +41,8 @@ sequenceDiagram
 The easiest way to install PodPacemaker is by using the provided Helm chart. The chart includes all the necessary components to deploy PodPacemaker on your Kubernetes cluster.
 
 ```bash
-helm install pod-pacemaker oci://ghcr.io/woehrl01/pod-pacemaker/pod-pacemaker --version 1.2.0
+LATEST_VERSION=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/woehrl01/pod-pacemaker/releases/latest | jq -r '.tag_name | sub("^v"; ""))
+helm install pod-pacemaker oci://ghcr.io/woehrl01/pod-pacemaker/pod-pacemaker --version $LATEST_VERSION
 ```
 
 > [!NOTE]
