@@ -109,10 +109,6 @@ You can also exclude pods if they are part of a DaemonSet. By adding configuring
 
 You can exclude pods from a specific namespace by specifying the namespaces in the `--namespace-exclusions` flag in the `init-cni` container arguments. By default, the `kube-system` namespace is excluded.
 
-### Summary
-
-By configuring these four types of throttling parameters within the `PacemakerConfig` resource, administrators can finely tune how resources are allocated and consumed, ensuring that critical services receive the resources they need while maintaining overall system stability and performance.
-
 ## License
 
 PodPacemaker is released under the MIT License.
