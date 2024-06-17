@@ -63,7 +63,22 @@ func GetIoWait() float64 {
 	if err != nil {
 		return 0
 	}
-	averageLoad := (loadSecond[0].Iowait - loadFirst[0].Iowait) / 10
+
+	total1 := Total(loadFirst[0])
+	total2 := Total(loadSecond[0])
+
+	iowait1 := loadFirst[0].Iowait
+	iowait2 := loadSecond[0].Iowait
+
+	// Calculate the average load
+	averageLoad := (iowait2 - iowait1) / (total2 - total1) * 100
 
 	return averageLoad
+}
+
+func Total(c cpu.TimesStat) float64 {
+	total := c.User + c.System + c.Idle + c.Nice + c.Iowait + c.Irq +
+		c.Softirq + c.Steal + c.Guest + c.GuestNice
+
+	return total
 }

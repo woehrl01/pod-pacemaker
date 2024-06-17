@@ -39,6 +39,10 @@ type NodeThrottleConfig struct {
 	// +kubebuilder:validation:Optional
 	// Configures a limitting strategy based on the IO load of the node
 	IO IO `json:"io"`
+
+	// +kubebuilder:validation:Optional
+	// Configures a limitting strategy based on the load average of the node
+	LoadAvg LoadAvg `json:"loadAvg"`
 }
 
 type RateLimitConfig struct {
@@ -58,6 +62,19 @@ type Cpu struct {
 	// +kubebuilder:validation:Optional
 	// Sets the increment by which the CPU load will be increased by a starting pod until the next measurement refresh
 	IncrementBy string `json:"incrementBy"`
+}
+
+type LoadAvg struct {
+	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)?$`
+	// Sets the limit of load average that should not be exceeded
+	MaxLoad string `json:"maxLoad"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)?$`
+	// Sets the increment by which the load average will be increased by a starting pod until the next measurement refresh
+	IncrementBy string `json:"incrementBy"`
+	// +kubebuilder:validation:Optional
+	// Sets whether the load average should be measured per CPU core or in total
+	PerCore bool `json:"perCore"`
 }
 
 type IO struct {
