@@ -66,6 +66,16 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 		))
 	}
 
+	// then load average
+	if matchingConfig.Spec.ThrottleConfig.LoadAvg.MaxLoad != "" {
+		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnLoadAvg(
+			matchingConfig.Spec.ThrottleConfig.LoadAvg.MaxLoad,
+			matchingConfig.Spec.ThrottleConfig.LoadAvg.PerCore,
+			matchingConfig.Spec.ThrottleConfig.LoadAvg.IncrementBy,
+			t.currentCloseChannel,
+		))
+	}
+
 	// then CPU load
 	if matchingConfig.Spec.ThrottleConfig.Cpu.MaxLoad != "" {
 		throttlers = append(throttlers, throttler.NewConcurrencyControllerBasedOnCpu(
