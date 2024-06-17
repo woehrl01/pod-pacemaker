@@ -37,13 +37,13 @@ func NewConcurrencyControllerBasedOnLoadAvg(maxLoadAvg string, perCpu bool, incr
 		for {
 			select {
 			case <-close:
-				logrus.Info("closing IO load monitor")
-				err = fmt.Errorf("closing IO load monitor")
+				logrus.Info("closing load avg monitor")
+				err = fmt.Errorf("closing load avg monitor")
 				return
 			default:
 				currentLoad = GetLoadAvg(perCpu)
 				updated()
-				logrus.Debugf("current IO load: %f", currentLoad)
+				logrus.Debugf("current load avg: %f", currentLoad)
 			}
 		}
 	}()
