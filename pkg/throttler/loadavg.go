@@ -3,6 +3,7 @@ package throttler
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/load"
@@ -44,6 +45,7 @@ func NewConcurrencyControllerBasedOnLoadAvg(maxLoadAvg string, perCpu bool, incr
 				currentLoad = GetLoadAvg(perCpu)
 				updated()
 				logrus.Debugf("current load avg: %f", currentLoad)
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}()
