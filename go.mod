@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/containernetworking/cni v1.2.1
-	github.com/containernetworking/plugins v1.5.0
+	github.com/containernetworking/plugins v1.5.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/shirou/gopsutil/v4 v4.24.5
@@ -54,7 +54,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/term v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
