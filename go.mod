@@ -3,7 +3,7 @@ module woehrl01/pod-pacemaker
 go 1.22.2
 
 require (
-	github.com/containernetworking/cni v1.2.1
+	github.com/containernetworking/cni v1.2.2
 	github.com/containernetworking/plugins v1.5.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/shirou/gopsutil/v3 v3.24.5
