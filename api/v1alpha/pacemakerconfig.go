@@ -46,7 +46,7 @@ type NodeThrottleConfig struct {
 }
 
 type RateLimitConfig struct {
-	// +kubebuilder:validation:Pattern=`^[0-9]+(µs|ns|ms|s|m|h)$`
+	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)?(µs|ns|ms|s|m|h)$`
 	// Sets the fill factor of the rate limiter in time.Duration format (e.g. "100ms" for 10 requests per second)
 	FillFactor string `json:"fillFactor"`
 	// +kubebuilder:validation:Minimum=1
