@@ -50,11 +50,13 @@ func NewConcurrencyControllerBasedOnCpu(maxCpuLoad string, incrementByStr string
 	return c
 }
 
+// GetCpuLoad returns the current CPU load, e.g. 0.0 for 0% and 100.0 for 100%
 func GetCpuLoad() float64 {
 	perCpu := false // get total load
 	load, err := cpu.Percent(5*time.Second, perCpu)
 	if err != nil {
 		return 0
 	}
+
 	return load[0]
 }

@@ -78,6 +78,28 @@ spec:
                     required:
                     - maxLoad
                     type: object
+                  loadAvg:
+                    description: Configures a limitting strategy based on the load
+                      average of the node
+                    properties:
+                      incrementBy:
+                        description: Sets the increment by which the load average
+                          will be increased by a starting pod until the next measurement
+                          refresh
+                        pattern: ^[0-9]+(\.[0-9]+)?$
+                        type: string
+                      maxLoad:
+                        description: Sets the limit of load average that should not
+                          be exceeded
+                        pattern: ^[0-9]+(\.[0-9]+)?$
+                        type: string
+                      perCore:
+                        description: Sets whether the load average should be measured
+                          per CPU core or in total
+                        type: boolean
+                    required:
+                    - maxLoad
+                    type: object
                   maxConcurrent:
                     description: Configures a limitting strategy based on the maximum
                       number of concurrent pod starts
