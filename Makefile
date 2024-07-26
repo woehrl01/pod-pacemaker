@@ -59,13 +59,13 @@ proto:
        proto/pod_limiter.proto
 
 cni:
-	cd cmd/cni-plugin && go build -o ../../bin/cni-plugin
+	cd cmd/cni-plugin && CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o ../../bin/cni-plugin
 
 make-init:
-	cd cmd/init && go build -o ../../bin/cni-init
+	cd cmd/init && CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o ../../bin/cni-init
 
 daemonset:
-	cd cmd/node-daemon && go build -o ../../bin/node-daemon
+	cd cmd/node-daemon && CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o ../../bin/node-daemon
 
 build: cni make-init daemonset
 
