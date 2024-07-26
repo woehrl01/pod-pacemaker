@@ -11,7 +11,6 @@ export GOOS=linux
 
 .PHONY: proto
 .ONESHELL:
-SHELL := /bin/bash
 
 define kind_load =
 	# The architecture to load depends on the current environment (gitlab runner/workstation)
@@ -50,10 +49,9 @@ define kind_deploy =
 		--set image.tag=${tag} \
 		--set debugLogging=true \
 		--set defaultThrottleConfig.config.maxConcurrent.value=1
-	env > makefilenv
 endef
 
-# .SILENT: kind-deploy kind-load
+.SILENT: kind-deploy kind-load
 
 proto:
 	protoc --go_out=. --go_opt=paths=source_relative \
