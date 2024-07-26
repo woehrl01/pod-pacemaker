@@ -41,7 +41,8 @@ sequenceDiagram
 The easiest way to install PodPacemaker is by using the provided Helm chart. The chart includes all the necessary components to deploy PodPacemaker on your Kubernetes cluster.
 
 ```bash
-helm install pod-pacemaker oci://ghcr.io/woehrl01/pod-pacemaker/pod-pacemaker --version 1.2.0
+LATEST_VERSION=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/woehrl01/pod-pacemaker/releases/latest | jq -r '.tag_name | sub("^v"; ""))
+helm install pod-pacemaker oci://ghcr.io/woehrl01/pod-pacemaker/pod-pacemaker --version $LATEST_VERSION
 ```
 
 > [!NOTE]
@@ -79,8 +80,8 @@ The `throttleConfig` section comprises four key types of throttling parameters, 
 
 4. **I/O Throttling (`io`)**:
 
-   - `maxLoad`: Defines the maximum I/O load that is permissible. Similar to CPU throttling, this setting helps prevent I/O saturation, ensuring that the system remains responsive and stable during pod initialization. e.g. `0.5` means 50% of I/O usage.
-   - `incrementBy`: Defines the amount by which the current I/O usage is increased for each pod. This parameter is useful when the actual I/O usage is not known and you want to increase the current usage by a fixed value until the actual usage is calculated. e.g. `0.1` means 10% of I/O usage.
+   - `maxLoad`: Defines the maximum I/O load that is permissible. Similar to CPU throttling, this setting helps prevent I/O saturation, ensuring that the system remains responsive and stable during pod initialization. e.g. `50` means 50% of I/O usage.
+   - `incrementBy`: Defines the amount by which the current I/O usage is increased for each pod. This parameter is useful when the actual I/O usage is not known and you want to increase the current usage by a fixed value until the actual usage is calculated. e.g. `10` means 10% of I/O usage.
 
 > [!NOTE]
 > If using the `cpu` or `io` throttling options, consider it in combination with the other throttling options, as the current resource usage will be only calculated as an average of the last 5 seconds.
@@ -108,10 +109,6 @@ You can also exclude pods if they are part of a DaemonSet. By adding configuring
 #### Namespace
 
 You can exclude pods from a specific namespace by specifying the namespaces in the `--namespace-exclusions` flag in the `init-cni` container arguments. By default, the `kube-system` namespace is excluded.
-
-### Summary
-
-By configuring these four types of throttling parameters within the `PacemakerConfig` resource, administrators can finely tune how resources are allocated and consumed, ensuring that critical services receive the resources they need while maintaining overall system stability and performance.
 
 ## License
 
