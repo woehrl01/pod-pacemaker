@@ -127,7 +127,7 @@ spec:
                       fillFactor:
                         description: Sets the fill factor of the rate limiter in time.Duration
                           format (e.g. "100ms" for 10 requests per second)
-                        pattern: ^[0-9]+(µs|ns|ms|s|m|h)$
+                        pattern: ^[0-9]+(\.[0-9]+)?(µs|ns|ms|s|m|h)$
                         type: string
                     required:
                     - burst
