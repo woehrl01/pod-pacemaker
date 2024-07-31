@@ -51,7 +51,7 @@ jobs:
           VERSION=${{ steps.version.outputs.version }} make kind-deploy
 
       - name: Install Chainsaw
-        uses: kyverno/action-install-chainsaw@v0.2.7
+        uses: kyverno/action-install-chainsaw@v0.2.8
 
       - name: Run Chainsaw Test
         run: chainsaw test --skip-delete=true e2e
