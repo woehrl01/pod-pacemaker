@@ -6,7 +6,7 @@ toolchain go1.23.3
 
 require (
 	github.com/containernetworking/cni v1.2.3
-	github.com/containernetworking/plugins v1.6.0
+	github.com/containernetworking/plugins v1.6.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sirupsen/logrus v1.9.3
@@ -56,7 +56,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/term v0.25.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
