@@ -14,9 +14,9 @@ require (
 	golang.org/x/time v0.8.0
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.0
-	k8s.io/api v0.32.0
-	k8s.io/apimachinery v0.32.0
-	k8s.io/client-go v0.32.0
+	k8s.io/api v0.32.1
+	k8s.io/apimachinery v0.32.1
+	k8s.io/client-go v0.32.1
 )
 
 require (
