@@ -6,7 +6,7 @@ toolchain go1.23.4
 
 require (
 	github.com/containernetworking/cni v1.2.3
-	github.com/containernetworking/plugins v1.6.1
+	github.com/containernetworking/plugins v1.6.2
 	github.com/prometheus/client_golang v1.20.5
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sirupsen/logrus v1.9.3
