@@ -2,7 +2,7 @@ module woehrl01/pod-pacemaker
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.23.5
 
 require (
 	github.com/containernetworking/cni v1.2.3
