@@ -62,7 +62,8 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 		}
 	}
 
-	completed := pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed
+	markedAsDeleted := pod.DeletionTimestamp != nil
+	completed := pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed || markedAsDeleted
 
 	if allStarted {
 		log.WithField("pod", slotName).Debug("Pod is fully started, releasing slot")
