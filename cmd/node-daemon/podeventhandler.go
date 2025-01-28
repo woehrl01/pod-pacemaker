@@ -62,6 +62,7 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 		}
 	}
 
+	markedAsDeleted := pod.DeletionTimestamp != nil
 	completed := pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed
 
 	if allStarted {
@@ -69,6 +70,9 @@ func (p *PodEventHandler) OnAdd(pod *v1.Pod) {
 		p.throttler.ReleaseSlot(p.ctx, slotName)
 	} else if allTerminated || completed {
 		log.WithField("pod", slotName).Debug("Pod is completed, releasing slot")
+		p.throttler.ReleaseSlot(p.ctx, slotName)
+	} else if markedAsDeleted {
+		log.WithField("pod", slotName).Debug("Pod is marked as deleted, releasing slot")
 		p.throttler.ReleaseSlot(p.ctx, slotName)
 	} else if failedState {
 		log.WithField("pod", slotName).Debug("Pod has failed, releasing slot")
