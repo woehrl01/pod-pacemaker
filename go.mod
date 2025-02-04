@@ -11,7 +11,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.6
-	golang.org/x/time v0.9.0
+	golang.org/x/time v0.10.0
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.3
 	k8s.io/api v0.32.1
