@@ -11,7 +11,7 @@ require (
 	github.com/spf13/pflag v1.0.9
 	golang.org/x/time v0.12.0
 	google.golang.org/grpc v1.73.0
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/protobuf v1.36.8
 	k8s.io/api v0.34.0
 	k8s.io/apimachinery v0.34.0
 	k8s.io/client-go v0.34.0
