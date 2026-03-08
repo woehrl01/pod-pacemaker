@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
       - name: Git Version
         id: version
-        uses: paulhatch/semantic-version@v5.4.0
+        uses: paulhatch/semantic-version@v6.0.1
         with:
           tag_prefix: "v"
           version_format: ${{ github.event_name == 'release' && '${major}.${minor}.${patch}' || '${major}.${minor}.${patch}-prerelease${increment}' }}
