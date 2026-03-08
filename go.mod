@@ -7,7 +7,7 @@ require (
 	github.com/containernetworking/plugins v1.9.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/time v0.14.0
 	google.golang.org/grpc v1.76.0
