@@ -35,7 +35,7 @@ jobs:
           tag_prefix: "v"
           version_format: ${{ github.event_name == 'release' && '${major}.${minor}.${patch}' || '${major}.${minor}.${patch}-prerelease${increment}' }}
       - name: Setup buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Run make
         run: |
           VERSION=${{ steps.version.outputs.version }} make docker-build
