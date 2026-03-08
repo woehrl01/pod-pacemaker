@@ -1,6 +1,6 @@
 module woehrl01/pod-pacemaker
 
-go 1.24.2
+go 1.25.0
 
 require (
 	github.com/containernetworking/cni v1.3.0
@@ -9,7 +9,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
-	golang.org/x/time v0.14.0
+	golang.org/x/time v0.15.0
 	google.golang.org/grpc v1.79.2
 	google.golang.org/protobuf v1.36.11
 	k8s.io/api v0.34.1
