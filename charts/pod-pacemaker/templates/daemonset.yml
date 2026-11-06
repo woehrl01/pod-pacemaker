@@ -39,15 +39,7 @@ spec:
           command:
             - "./cni-init"
           args:
-            - "--cni-bin-dir=/opt/cni/bin"
-            - "--cni-config-dir=/etc/cni/net.d"
-            - "--max-wait-time-in-seconds={{ .Values.cni.maxWaitTimeInSeconds }}"
-            - "--primary-config-name={{ .Values.cni.primaryName }}"
-            - "--merged-config-name={{ .Values.cni.mergedName }}"
-            - "--namespace-exclusions={{ join "," .Values.namespaceExclusions }}"
-            - "--success-on-connection-timeout={{ .Values.cni.successOnConnectionTimeout }}"
-            - "--daemon-socket={{ .Values.daemon.socketFile }}"
-            - "--disable-throttle={{ .Values.cni.disableThrottle }}"
+            {{- include "pod-pacemaker.cniInitArgs" . | nindent 12 }}
           volumeMounts:
             - name: cni-bin-dir
               mountPath: /opt/cni/bin
@@ -56,6 +48,22 @@ spec:
             - name: pod-pacemaker-socket
               mountPath: {{ .Values.daemon.socketPath }}
       containers:
+        {{- if .Values.cni.watchInterval }}
+        # re-merges the CNI configuration whenever the primary CNI rewrites its own
+        - name: cni-config-sync
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "./cni-init"
+          args:
+            {{- include "pod-pacemaker.cniInitArgs" . | nindent 12 }}
+            - "--watch-interval={{ .Values.cni.watchInterval }}"
+          volumeMounts:
+            - name: cni-bin-dir
+              mountPath: /opt/cni/bin
+            - name: cni-config-dir
+              mountPath: /etc/cni/net.d
+        {{- end }}
         - name: node-daemon
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
