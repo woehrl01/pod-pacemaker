@@ -1,0 +1,33 @@
+# Categories and version bumps come from conventional PR titles (squash-merged
+# semantic commits) — no labels needed.
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+template: |
+  $CHANGES
+
+categories:
+  - title: '💥 Breaking Changes'
+    semver-increment: 'major'
+    exclusive: true
+    when:
+      conventional:
+        breaking: true
+  - title: '⬆️ Dependencies'
+    collapse-after: 3
+    exclusive: true
+    when:
+      conventional:
+        scope: 'deps'
+  - title: '🚀 Features'
+    semver-increment: 'minor'
+    exclusive: true
+    when:
+      conventional:
+        type: 'feat'
+  - title: '🐛 Bug Fixes'
+    exclusive: true
+    when:
+      conventional:
+        type: 'fix'
+  - title: '🧰 Maintenance'
