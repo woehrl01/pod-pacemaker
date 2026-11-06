@@ -140,7 +140,9 @@ func startGrpcServer(throttler throttler.Throttler, o Options, podAccessor podac
 	s := grpc.NewServer()
 	go func() {
 		<-stopper
-		s.GracefulStop()
+		// not GracefulStop: a request waiting for a slot can block until its deadline, which would hold
+		// the shutdown just as long; the CNI plugin retries a dropped request against the next daemon
+		s.Stop()
 	}()
 
 	service := NewPodLimitersServer(throttler, podAccessor, o)

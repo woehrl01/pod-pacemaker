@@ -61,3 +61,41 @@ func TestAcquireSlotWithDaemon(t *testing.T) {
 		})
 	}
 }
+
+// the daemon restarts while a request waits for a slot: its Stop drops the request, and the plugin
+// gets the slot from the next daemon on the same socket instead of failing
+func TestAcquireSlotAcrossDaemonRestart(t *testing.T) {
+	socket := t.TempDir() + "/pod-pacemaker.sock"
+	serve := func(daemon *fakeDaemon) *grpc.Server {
+		listener, err := net.Listen("unix", socket)
+		if err != nil {
+			t.Fatal(err)
+		}
+		server := grpc.NewServer()
+		pb.RegisterPodLimiterServer(server, daemon)
+		go server.Serve(listener)
+		return server
+	}
+	old := serve(&fakeDaemon{grant: false})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- acquireSlot(ctx, "ns/pod", &PluginConf{DaemonSocketPath: socket}, WaitForSlot)
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+	old.Stop()
+	next := serve(&fakeDaemon{grant: true})
+	defer next.Stop()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("acquireSlot() error = %v, want the slot from the next daemon", err)
+		}
+	case <-ctx.Done():
+		t.Fatal("acquireSlot() did not return")
+	}
+}
