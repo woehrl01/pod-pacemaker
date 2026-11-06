@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
 	flag "github.com/spf13/pflag"
 
@@ -26,6 +28,7 @@ var (
 	namespaceExclusions        = flag.StringSlice("namespace-exclusions", []string{"kube-system"}, "Namespaces to exclude from the CNI configuration")
 	successOnConnectionTimeout = flag.Bool("success-on-connection-timeout", true, "If true, there is no concurrency enforcement if the connection to the daemon times out")
 	disableThrottling          = flag.Bool("disable-throttle", false, "If true, the CNI plugin will not enforce throttling")
+	watchInterval              = flag.Duration("watch-interval", 0, "If set, keep running and re-merge the CNI configuration at this interval whenever the primary configuration changes")
 )
 
 func main() {
@@ -72,11 +75,32 @@ func main() {
 	// that are executed when a pod is started
 	primaryConfigPath := fmt.Sprintf("%s/%s", *cniConfigDir, *primaryConfigName)
 	mergedConfigPath := fmt.Sprintf("%s/%s", *cniConfigDir, *mergedConfigName)
-	if err := mergeTwoConfigs(primaryConfigPath, configPath, mergedConfigPath); err != nil {
+	if _, err := mergeTwoConfigs(primaryConfigPath, configPath, mergedConfigPath); err != nil {
 		log.Fatalf("Failed to merge CNI network configuration: %v", err)
 	}
 
 	log.Println("CNI plugin setup completed successfully.")
+
+	if *watchInterval > 0 {
+		watchPrimaryConfig(primaryConfigPath, configPath, mergedConfigPath, *watchInterval)
+	}
+}
+
+// watchPrimaryConfig keeps the merged configuration in sync with the primary one. The primary CNI
+// may rewrite its configuration at any time (aws-node writes 10-aws.conflist on every start), but
+// the runtime only reads the merged file, which sorts first.
+func watchPrimaryConfig(primaryConfigPath, configPath, mergedConfigPath string, interval time.Duration) {
+	log.Infof("Watching %s every %s", primaryConfigPath, interval)
+	for range time.Tick(interval) {
+		changed, err := mergeTwoConfigs(primaryConfigPath, configPath, mergedConfigPath)
+		if err != nil {
+			log.Warnf("Failed to re-merge CNI network configuration: %v", err)
+			continue
+		}
+		if changed {
+			log.Infof("Primary CNI configuration changed, updated %s", mergedConfigPath)
+		}
+	}
 }
 
 // copyFile copies a file from src to dst
@@ -159,35 +183,38 @@ type CniConfigCapabilities struct {
 	PodAnnotations bool `json:"io.kubernetes.cri.pod-annotations"`
 }
 
-func mergeTwoConfigs(configFile1, configFile2, outputFile string) error {
+// mergeTwoConfigs writes the plugins of configFile1 followed by those of configFile2 to outputFile
+// and reports whether outputFile changed. The file is replaced atomically, so the runtime never
+// reads a partial configuration.
+func mergeTwoConfigs(configFile1, configFile2, outputFile string) (bool, error) {
 	// Read the contents of the two configuration files
 	config1, err := os.ReadFile(configFile1)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	config2, err := os.ReadFile(configFile2)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// decode the JSON data
 	var config1Data map[string]interface{}
 	var config2Data map[string]interface{}
 	if err := json.Unmarshal(config1, &config1Data); err != nil {
-		return err
+		return false, err
 	}
 	if err := json.Unmarshal(config2, &config2Data); err != nil {
-		return err
+		return false, err
 	}
 
 	// check if both have "plugins" key
 	if _, ok := config1Data["plugins"]; !ok {
-		return fmt.Errorf("config1 does not have 'plugins' key")
+		return false, fmt.Errorf("config1 does not have 'plugins' key")
 	}
 
 	if _, ok := config2Data["plugins"]; !ok {
-		return fmt.Errorf("config2 does not have 'plugins' key")
+		return false, fmt.Errorf("config2 does not have 'plugins' key")
 	}
 
 	// merge the "plugins" key
@@ -201,15 +228,23 @@ func mergeTwoConfigs(configFile1, configFile2, outputFile string) error {
 	// encode the JSON data
 	mergedConfig, err := json.MarshalIndent(config1Data, "", "  ")
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	// write the merged configuration to the output file
-	if err := os.WriteFile(outputFile, mergedConfig, 0644); err != nil {
-		return err
+	if current, err := os.ReadFile(outputFile); err == nil && bytes.Equal(current, mergedConfig) {
+		return false, nil
 	}
 
-	return nil
+	// write under a name the runtime ignores, then rename over the merged configuration
+	tmpFile := outputFile + ".tmp"
+	if err := os.WriteFile(tmpFile, mergedConfig, 0644); err != nil {
+		return false, err
+	}
+	if err := os.Rename(tmpFile, outputFile); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func detectPrimaryConfigName(configDir string) *string {
