@@ -69,6 +69,7 @@ spec:
             - "--metrics-enabled={{ .Values.daemon.metricsEnabled }}"
             - "--skip-daemonsets={{ .Values.daemon.skipDaemonsets }}"
             - "--track-inflight-requests={{ .Values.daemon.trackInflightRequests }}"
+            - "--max-slot-hold={{ .Values.daemon.maxSlotHold }}"
           env:
             - name: NODE_NAME
               valueFrom:

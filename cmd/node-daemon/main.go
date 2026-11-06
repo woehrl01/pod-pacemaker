@@ -39,6 +39,7 @@ var (
 	metricsPort           = flag.Int("metrics-port", 9000, "The port for the metrics server")
 	metricsEnabled        = flag.Bool("metrics-enabled", true, "Enable the metrics server")
 	trackInflightRequests = flag.Bool("track-inflight-requests", false, "Track inflight requests")
+	maxSlotHold           = flag.Duration("max-slot-hold", 0, "Release a slot held longer than this, e.g. by a pod stuck in a state not detected as failed; 0 never does")
 )
 
 func main() {
@@ -118,7 +119,7 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 	}))
 
 	podInformer := factory.Core().V1().Pods()
-	podEventHandler := NewPodEventHandler(throttler, ctx)
+	podEventHandler := NewPodEventHandler(throttler, ctx, *maxSlotHold)
 
 	removeOutdated := func() {
 		currentPods, err := podInformer.Lister().Pods(v1.NamespaceAll).List(labels.Everything())

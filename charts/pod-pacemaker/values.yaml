@@ -14,6 +14,8 @@ daemon:
   skipDaemonsets: true
   metricsPort: 9000
   trackInflightRequests: false
+  # release a slot held longer than this (a pod stuck in a state not detected as failed); 0s never does
+  maxSlotHold: 0s
 
 podAnnotations: {}
 podLabels: {}
