@@ -79,9 +79,13 @@ func (cc *ConcurrencyController) broadcastPossibleConditionChange() {
 
 func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, data Data) error {
 	for {
+		// taken under the lock with the condition check: a change broadcast after the check closes
+		// exactly this channel, so it is neither missed nor read while it is being replaced
+		var conditionChanged chan struct{}
 		if done, err := func() (bool, error) {
 			cc.mu.Lock()
 			defer cc.mu.Unlock()
+			conditionChanged = cc.waitOnCondition
 			_, isActive := cc.activeItems[slotId]
 			if ctx.Err() != nil { // Context was cancelled.
 				if !isActive { // Remove the item if it wasn't activated.
@@ -108,7 +112,7 @@ func (cc *ConcurrencyController) AquireSlot(ctx context.Context, slotId string, 
 		}
 
 		select {
-		case <-cc.waitOnCondition:
+		case <-conditionChanged:
 		case <-ctx.Done():
 		}
 	}
@@ -123,6 +127,15 @@ func (cc *ConcurrencyController) ReleaseSlot(ctx context.Context, slotId string)
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
 	cc.removeItem(slotId)
+}
+
+// SeedSlots marks slots granted by a replaced controller as active, so that they keep counting
+func (cc *ConcurrencyController) SeedSlots(slotIds []string) {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	for _, slotId := range slotIds {
+		cc.activeItems[slotId] = true
+	}
 }
 
 func (cc *ConcurrencyController) ActiveSlots() []string {
