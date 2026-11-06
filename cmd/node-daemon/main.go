@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -39,7 +41,7 @@ var (
 	metricsPort           = flag.Int("metrics-port", 9000, "The port for the metrics server")
 	metricsEnabled        = flag.Bool("metrics-enabled", true, "Enable the metrics server")
 	trackInflightRequests = flag.Bool("track-inflight-requests", false, "Track inflight requests")
-	maxSlotHold           = flag.Duration("max-slot-hold", 0, "Release a slot held longer than this, e.g. by a pod stuck in a state not detected as failed; 0 never does")
+	maxSlotHold           = flag.Duration("max-slot-hold", 0, "Release a slot held longer than this, e.g. by a pod stuck in a state not detected as failed; checked on pod events and the 30s resync, so up to 30s later; 0 never does")
 )
 
 func main() {
@@ -91,7 +93,6 @@ func main() {
 			SkipDaemonSets:        *skipDaemonSets,
 			TrackInflightRequests: *trackInflightRequests,
 		}, podAccessor, ctx.Done())
-		wg.Done()
 	}()
 
 	c := make(chan os.Signal, 1)
@@ -134,7 +135,13 @@ func startPodHandler(ctx context.Context, clientset *kubernetes.Clientset, throt
 			podEventHandler.OnAdd(obj.(*v1.Pod))
 		},
 		DeleteFunc: func(obj interface{}) {
-			podEventHandler.OnDelete(obj.(*v1.Pod))
+			// a delete missed while the watch was down arrives after the re-list as a tombstone
+			if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+				obj = tombstone.Obj
+			}
+			if pod, ok := obj.(*v1.Pod); ok {
+				podEventHandler.OnDelete(pod)
+			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			podEventHandler.OnAdd(newObj.(*v1.Pod))
@@ -205,28 +212,33 @@ func removeStartupTaint(clientset *kubernetes.Clientset, nodeName string) {
 		return
 	}
 
-	node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
-	if err != nil {
-		log.Fatalf("Failed to get node %s: %v", nodeName, err)
-	}
-
-	newTaints := []v1.Taint{}
-	for _, taint := range node.Spec.Taints {
-		if taint.Key != *taintToRemove {
-			newTaints = append(newTaints, taint)
+	// the kubelet and node provisioners update a starting node too, so a conflict is expected now and then
+	err := retry.OnError(apiBackoff, func(error) bool { return true }, func() error {
+		node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-	}
 
-	if len(newTaints) == len(node.Spec.Taints) {
-		log.Println("No taint 'pod-pacemaker' found on node, no update required.")
-		return
-	}
+		newTaints := []v1.Taint{}
+		for _, taint := range node.Spec.Taints {
+			if taint.Key != *taintToRemove {
+				newTaints = append(newTaints, taint)
+			}
+		}
 
-	node.Spec.Taints = newTaints
+		if len(newTaints) == len(node.Spec.Taints) {
+			log.Println("No taint 'pod-pacemaker' found on node, no update required.")
+			return nil
+		}
 
-	_, err = clientset.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
+		node.Spec.Taints = newTaints
+
+		_, err = clientset.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
+		return err
+	})
 	if err != nil {
-		log.Fatalf("Failed to update node %s: %v", nodeName, err)
+		// the taint keeps pods off the node, a restart tries again
+		log.Fatalf("Failed to remove the startup taint from node %s: %v", nodeName, err)
 	}
 }
 
@@ -242,5 +254,7 @@ func startPrometheusMetricsServer(stopper <-chan struct{}) {
 		srv.Shutdown(context.Background())
 	}()
 
-	log.Fatal(srv.ListenAndServe(), nil)
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(err)
+	}
 }
