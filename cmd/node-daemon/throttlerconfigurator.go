@@ -2,18 +2,26 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
+	"time"
 	"woehrl01/pod-pacemaker/api/v1alpha"
 	"woehrl01/pod-pacemaker/pkg/throttler"
 
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 )
+
+// apiBackoff makes 6 attempts at a failed API call, about 30s apart in total (1s, 2s, ... 16s)
+var apiBackoff = wait.Backoff{Steps: 6, Duration: time.Second, Factor: 2, Jitter: 0.1}
 
 type throttlerConfigurator struct {
 	informers           cache.SharedIndexInformer
@@ -22,6 +30,7 @@ type throttlerConfigurator struct {
 	lock                sync.Mutex
 	nodeName            string
 	dynamicThrottlers   throttler.DynamicThrottler
+	configured          bool // the throttlers were set at least once
 }
 
 func NewThrottlerConfigurator(informer cache.SharedIndexInformer, clientSet *kubernetes.Clientset, nodeName string, dynamicThrottler throttler.DynamicThrottler) *throttlerConfigurator {
@@ -38,10 +47,20 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	matchingConfig, err := t.getMatchingConfig()
+	if err != nil {
+		if !t.configured {
+			// nothing to lose yet, and without a restart the node would stay unthrottled until the next change
+			log.Fatalf("Failed to select the config: %v", err)
+		}
+		// a crash would lose the slots held right now, so the current throttlers stay until the next change
+		log.Errorf("Failed to select the config, keeping the current throttlers: %v", err)
+		return
+	}
+	t.configured = true
+
 	close(t.currentCloseChannel) // close the current throttlers
 	t.currentCloseChannel = make(chan struct{})
-
-	matchingConfig := t.getMatchingConfig()
 
 	if matchingConfig == nil {
 		log.Infof("No matching config found")
@@ -105,7 +124,7 @@ func (t *throttlerConfigurator) Updatethrottlers() {
 	t.dynamicThrottlers.SetThrottlers(throttlers)
 }
 
-func (t *throttlerConfigurator) getMatchingConfig() *v1alpha.PacemakerConfig {
+func (t *throttlerConfigurator) getMatchingConfig() (*v1alpha.PacemakerConfig, error) {
 	allConfigsUnstructured := t.informers.GetStore().List()
 
 	allConfigs := make([]*v1alpha.PacemakerConfig, 0, len(allConfigsUnstructured))
@@ -113,14 +132,21 @@ func (t *throttlerConfigurator) getMatchingConfig() *v1alpha.PacemakerConfig {
 		unstructured := config.(*unstructured.Unstructured)
 		config, err := v1alpha.ConvertToPacemakerConfig(unstructured)
 		if err != nil {
-			log.Fatalf("Failed to convert config %s: %v", unstructured.GetName(), err)
+			// one broken config must not take down the daemon on every node
+			log.Errorf("Skipping config %s, failed to convert it: %v", unstructured.GetName(), err)
+			continue
 		}
 		allConfigs = append(allConfigs, config)
 	}
 
-	node, err := t.clientset.CoreV1().Nodes().Get(context.Background(), t.nodeName, metav1.GetOptions{})
+	var node *v1.Node
+	err := retry.OnError(apiBackoff, func(error) bool { return true }, func() error {
+		var err error
+		node, err = t.clientset.CoreV1().Nodes().Get(context.Background(), t.nodeName, metav1.GetOptions{})
+		return err
+	})
 	if err != nil {
-		log.Fatalf("Failed to get node %s: %v", t.nodeName, err)
+		return nil, fmt.Errorf("failed to get node %s: %w", t.nodeName, err)
 	}
 
 	sort.Slice(allConfigs, func(i, j int) bool {
@@ -141,5 +167,5 @@ func (t *throttlerConfigurator) getMatchingConfig() *v1alpha.PacemakerConfig {
 		matchingConfig = c
 		break // we only need the highest priority config which matches
 	}
-	return matchingConfig
+	return matchingConfig, nil
 }

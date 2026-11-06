@@ -48,7 +48,7 @@ spec:
             - name: pod-pacemaker-socket
               mountPath: {{ .Values.daemon.socketPath }}
       containers:
-        {{- if .Values.cni.watchInterval }}
+        {{- if and .Values.cni.watchInterval (not (regexMatch "^([0.]+[a-zµ]*)+$" (toString .Values.cni.watchInterval))) }}
         # re-merges the CNI configuration whenever the primary CNI rewrites its own
         - name: cni-config-sync
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}

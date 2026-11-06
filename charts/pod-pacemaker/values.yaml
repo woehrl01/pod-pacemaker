@@ -6,7 +6,7 @@ cni:
   successOnConnectionTimeout: true
   mergedName: 00-merged-pod-pacemaker.conflist
   disableThrottle: false
-  # how often the merged configuration is re-synced with the primary CNI configuration; empty disables it
+  # how often the merged configuration is re-synced with the primary CNI configuration; empty or a zero duration (0, 0s, 0m, ...) disables it
   watchInterval: 10s
 
 daemon:

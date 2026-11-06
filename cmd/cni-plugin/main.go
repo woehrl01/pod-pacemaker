@@ -133,8 +133,8 @@ var retryBackoff = func() time.Duration {
 }
 
 // acquireSlot retries while the daemon is unreachable. If the daemon stays unreachable until ctx
-// expires, the pod starts without a slot when SuccessOnConnectionTimeout is set. The gRPC dial is
-// non-blocking, so an unreachable daemon shows up as a connection error of the Wait call.
+// expires, the pod starts without a slot when SuccessOnConnectionTimeout is set; that pod waits the
+// whole MaxWaitTimeInSeconds first. A reachable daemon that grants no slot in time fails the ADD.
 func acquireSlot(ctx context.Context, slotName string, conf *PluginConf, waitForSlot func(context.Context, string, *PluginConf) error) error {
 	var lastErr error
 	for ctx.Err() == nil {
@@ -184,8 +184,11 @@ func callChain(conf *PluginConf) (*current.Result, error) {
 }
 
 func shouldSkipThrotteling(conf *PluginConf, k8sArgs *K8sArgs) bool {
-	if v, ok := conf.RuntimeConfig.PodAnnotations["pod-pacemaker/skip"]; ok {
-		return v == "true"
+	// a runtime without the pod-annotations capability passes no runtimeConfig
+	if conf.RuntimeConfig != nil {
+		if v, ok := conf.RuntimeConfig.PodAnnotations["pod-pacemaker/skip"]; ok {
+			return v == "true"
+		}
 	}
 
 	if slices.Contains(conf.NamespaceExclusions, string(k8sArgs.K8S_POD_NAMESPACE)) {
