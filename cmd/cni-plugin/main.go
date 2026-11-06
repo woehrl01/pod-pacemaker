@@ -120,22 +120,47 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ctx, totalRequestCancel := context.WithTimeout(context.Background(), time.Second*time.Duration(conf.MaxWaitTimeInSeconds))
 	defer totalRequestCancel()
 
-	for {
-		if err := WaitForSlot(ctx, slotName, conf); err != nil {
-			if ctx.Err() == nil && isConnectionError(err) {
-				logrus.Warnf("Failed to connect to daemon, retrying: %v", err)
-				// random backoff
-				backoff := time.Duration(rand.Intn(5)) * time.Second
-				time.Sleep(backoff)
-				continue
-			}
-			logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
+	if err := acquireSlot(ctx, slotName, conf, WaitForSlot); err != nil {
+		logrus.Errorf("Failed to acquire slot %s: %v", slotName, err)
+		return err
+	}
+	return types.PrintResult(result, conf.CNIVersion)
+}
+
+// retryBackoff is the pause between attempts while the daemon is unreachable
+var retryBackoff = func() time.Duration {
+	return time.Duration(rand.Intn(5)) * time.Second
+}
+
+// acquireSlot retries while the daemon is unreachable. If the daemon stays unreachable until ctx
+// expires, the pod starts without a slot when SuccessOnConnectionTimeout is set. The gRPC dial is
+// non-blocking, so an unreachable daemon shows up as a connection error of the Wait call.
+func acquireSlot(ctx context.Context, slotName string, conf *PluginConf, waitForSlot func(context.Context, string, *PluginConf) error) error {
+	var lastErr error
+	for ctx.Err() == nil {
+		err := waitForSlot(ctx, slotName, conf)
+		if err == nil {
+			logrus.Infof("Acquired slot %s", slotName)
+			return nil
+		}
+		if !isConnectionError(err) {
 			return err
 		}
-		break
+		lastErr = err
+		logrus.Warnf("Failed to connect to daemon, retrying: %v", err)
+		select {
+		case <-time.After(retryBackoff()):
+		case <-ctx.Done():
+		}
 	}
-	logrus.Infof("Acquired slot %s", slotName)
-	return types.PrintResult(result, conf.CNIVersion)
+	if lastErr == nil {
+		return ctx.Err()
+	}
+	if conf.SuccessOnConnectionTimeout {
+		logrus.Warnf("Daemon unreachable until timeout, successOnConnectionTimeout is set, starting %s without a slot: %v", slotName, lastErr)
+		return nil
+	}
+	return lastErr
 }
 
 func cmdDel(args *skel.CmdArgs) error {
