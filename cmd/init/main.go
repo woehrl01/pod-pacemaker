@@ -66,7 +66,7 @@ func main() {
 
 	// Generate the CNI network configuration file
 	configPath := fmt.Sprintf("%s/20-%s.conflist", *cniConfigDir, *cniName)
-	if err := generateCNIConfig(configPath); err != nil {
+	if _, err := generateCNIConfig(configPath); err != nil {
 		log.Fatalf("Failed to generate CNI network configuration: %v", err)
 	}
 
@@ -131,8 +131,8 @@ func copyFile(src, dst string) error {
 	return os.Chmod(dst, sourceFileStat.Mode())
 }
 
-// generateCNIConfig creates a CNI network configuration file
-func generateCNIConfig(filePath string) error {
+// generateCNIConfig creates a CNI network configuration file. It reports whether the file was written.
+func generateCNIConfig(filePath string) (bool, error) {
 	config := CniConfigList{
 		CniVersion:   "0.4.0",
 		Name:         *cniName,
@@ -155,10 +155,31 @@ func generateCNIConfig(filePath string) error {
 
 	configContent, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return os.WriteFile(filePath, configContent, 0644)
+	return writeFileIfChanged(filePath, configContent)
+}
+
+// writeFileIfChanged writes content to path only when it differs from what is there, and reports
+// whether it wrote. Every write in the CNI configuration directory makes containerd reload the
+// network configuration (cni_conf_syncer.go); that reload takes go-cni's write lock and waits for
+// every pod network setup in flight, which with this plugin can wait up to maxWaitTimeInSeconds for
+// a slot. Meanwhile the CRI Status call, which needs the same lock, blocks, and after 30 s kubelet
+// reports "container runtime is down" and the node turns NotReady. So an unchanged file is not
+// touched, and a changed one is written under a name the runtime ignores and renamed over it.
+func writeFileIfChanged(path string, content []byte) (bool, error) {
+	if current, err := os.ReadFile(path); err == nil && bytes.Equal(current, content) {
+		return false, nil
+	}
+	tmpFile := path + ".tmp"
+	if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+		return false, err
+	}
+	if err := os.Rename(tmpFile, path); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 type CniConfigList struct {
@@ -231,20 +252,7 @@ func mergeTwoConfigs(configFile1, configFile2, outputFile string) (bool, error) 
 		return false, err
 	}
 
-	if current, err := os.ReadFile(outputFile); err == nil && bytes.Equal(current, mergedConfig) {
-		return false, nil
-	}
-
-	// write under a name the runtime ignores, then rename over the merged configuration
-	tmpFile := outputFile + ".tmp"
-	if err := os.WriteFile(tmpFile, mergedConfig, 0644); err != nil {
-		return false, err
-	}
-	if err := os.Rename(tmpFile, outputFile); err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return writeFileIfChanged(outputFile, mergedConfig)
 }
 
 func detectPrimaryConfigName(configDir string) *string {

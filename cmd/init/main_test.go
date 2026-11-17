@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 const ownConfig = `{"cniVersion": "0.4.0", "name": "pod-pacemaker", "plugins": [{"name": "pod-pacemaker", "type": "pod-pacemaker"}]}`
@@ -77,5 +78,39 @@ func TestMergeTwoConfigsKeepsMergedOnBrokenPrimary(t *testing.T) {
 	after, _ := os.ReadFile(merged)
 	if string(before) != string(after) {
 		t.Errorf("merged file changed after a failed merge")
+	}
+}
+
+// every write in the CNI configuration directory makes containerd reload the network configuration,
+// which blocks the CRI Status call while pod network setups wait for a slot; a restart of the init
+// container with the same flags must not write
+func TestGenerateCNIConfigWritesOnlyOnChange(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "20-pod-pacemaker.conflist")
+
+	if changed, err := generateCNIConfig(path); err != nil || !changed {
+		t.Fatalf("first generation: changed = %v, err = %v, want a new file", changed, err)
+	}
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := stat.ModTime()
+	time.Sleep(10 * time.Millisecond)
+
+	if changed, err := generateCNIConfig(path); err != nil || changed {
+		t.Fatalf("generation with the same flags: changed = %v, err = %v, want the file untouched", changed, err)
+	}
+	if stat, err = os.Stat(path); err != nil || !stat.ModTime().Equal(before) {
+		t.Errorf("file rewritten without a change: mtime %v -> %v, err = %v", before, stat.ModTime(), err)
+	}
+
+	saved := *maxWaitTimeInSeconds
+	t.Cleanup(func() { *maxWaitTimeInSeconds = saved })
+	*maxWaitTimeInSeconds = saved - 1
+	if changed, err := generateCNIConfig(path); err != nil || !changed {
+		t.Fatalf("generation after a flag change: changed = %v, err = %v, want an update", changed, err)
+	}
+	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
+		t.Errorf("temporary file left behind: %v", err)
 	}
 }
